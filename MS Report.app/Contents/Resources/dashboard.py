@@ -20,6 +20,7 @@ import io
 import json
 import mimetypes
 import os
+import re
 import secrets
 import shutil
 import signal
@@ -216,6 +217,10 @@ def validate_rows(folder, rows, blocks, max_z=4):
             E.parse_rt(r.get("spectrum_rt", ""))
         except E.UserError as e:
             errs["spectrum_rt"] = str(e).replace("spectrum_rt: ", "")
+        try:
+            E.parse_purity_rt(r.get("purity_rt", ""))
+        except E.UserError as e:
+            errs["purity_rt"] = str(e).replace("purity_rt: ", "")
         pep = None
         seq = r.get("sequence", "")
         if not seq.strip():
@@ -223,16 +228,25 @@ def validate_rows(folder, rows, blocks, max_z=4):
         elif r.get("topology", "") not in E.TOPOLOGIES:
             errs["topology"] = "choose linear or head-to-tail"
             try:   # still show the mass, guessing the topology
-                pep = E.parse_sequence(seq, "linear" if "-" in seq else "head-to-tail", blocks)
+                pep = E.parse_sequence(seq, E.guess_topology(seq), blocks)
                 info["guess"] = True
             except E.UserError:
                 pep = None
         else:
             try:
-                pep = E.parse_sequence(seq, r["topology"], blocks)
+                pep = E.parse_sequence(seq, r["topology"], blocks, r.get("bridges", ""))
             except E.UserError as e:
                 msg = str(e)
-                errs["topology" if "head-to-tail peptide has no ends" in msg else "sequence"] = msg
+                if msg.startswith("bridges: "):
+                    errs["bridges"] = msg[len("bridges: "):]
+                    try:   # still show the mass, without the bridge
+                        pep = E.parse_sequence(seq, r["topology"], blocks)
+                        info["guess"] = True
+                    except E.UserError:
+                        pep = None
+                else:
+                    errs["topology" if "head-to-tail peptide has no ends" in msg
+                         or "written as cyclo" in msg else "sequence"] = msg
         if pep is not None:
             info.update(residues=len(pep.units), formula=E.hill(pep.formula), mass=round(pep.mass, 4),
                         one_letter=E.one_letter(pep))
@@ -254,6 +268,186 @@ def api_validate(a):
     return dict(results=validate_rows(folder, a.get("rows", []), blocks))
 
 
+# ----------------------------------------------------------------------------
+# pasted sequences, mass calculator
+# ----------------------------------------------------------------------------
+def blocks_any(a):
+    """Building blocks of the open folder, or the shared ones when no folder is open."""
+    folder = Path(a["folder"]).expanduser().resolve() if a.get("folder") else E.MASTER_DIR
+    E.MASTER_DIR.mkdir(parents=True, exist_ok=True)
+    with contextlib.redirect_stdout(io.StringIO()):
+        path = E.find_blocks_file(folder if folder.is_dir() else E.MASTER_DIR)
+    return E.load_blocks(path)
+
+
+def has_ends(seq, blocks):
+    caps = [b.code for b in blocks.values() if b.kind in ("n_cap", "c_cap")]
+    s = re.sub(r"\s+", "", seq)
+    return any(s.startswith(c) for c in caps if c.endswith("-")) or any(s.endswith(c) for c in caps if c.startswith("-"))
+
+
+NUM_RE = re.compile(r"[\d.,]+")
+CELL_RE = re.compile(r"[A-Za-z][A-Za-z0-9]{1,5}(\([^)]+\)|\[[^\]]+\])?")
+
+
+def split_line(line, blocks):
+    """One pasted line -> (name, sequence, numbers, from_cells).
+    Cells come tab-separated from Excel or Word, else separated by spaces, commas or semicolons.
+    A batch sheet has one residue per cell (Ser | Ala | Arg ...): that run of cells is the sequence.
+    Otherwise the sequence is the last cell that reads as one."""
+    tabbed = "\t" in line
+    raw = [c.strip() for c in (line.split("\t") if tabbed else re.split(r"[,;]\s*|\s+", line))]
+    cells = [c for c in raw if c]
+    if not cells:
+        return None
+    numbers = []
+    for c in cells:
+        if NUM_RE.fullmatch(c) and "." in c:
+            try:
+                numbers.append(float(c.replace(",", "")))
+            except ValueError:
+                pass
+    if tabbed:      # one residue per cell
+        three = {b.code3 for b in blocks.values() if b.kind == "residue" and b.code3}
+        best, k = None, 0
+        while k < len(raw):
+            j = k
+            while j < len(raw) and CELL_RE.fullmatch(raw[j]):
+                j += 1
+            known = sum(1 for c in raw[k:j] if re.split(r"[(\[]", c)[0] in three)
+            if j - k >= 2 and known >= 2 and (best is None or j - k > best[1] - best[0]):
+                best = (k, j)
+            k = max(j, k + 1)
+        if best:
+            before = [c for c in raw[:best[0]] if c]
+            return (before[-1] if before else ""), "-".join(raw[best[0]:best[1]]), numbers, True
+    hit = None
+    for k, c in enumerate(cells):
+        if NUM_RE.fullmatch(c):
+            continue
+        try:
+            E.parse_sequence(c, E.guess_topology(c), blocks)
+            hit = k
+        except E.UserError:
+            pass
+    if hit is None:
+        texty = [k for k, c in enumerate(cells) if not NUM_RE.fullmatch(c)]
+        # nothing reads as a sequence: take the cell that looks most like one, so its error is shown
+        hit = max(texty, key=lambda k: (sum(ch.isupper() for ch in cells[k]) / len(cells[k]), k)) if texty \
+            else len(cells) - 1
+    others = cells[:hit] + (cells[hit + 1:] if tabbed else [])
+    if tabbed:
+        named = [c for c in others if not NUM_RE.fullmatch(c)]
+        name = named[0] if named else (others[0] if others else "")
+    else:
+        name = " ".join(others)
+    return name, cells[hit], numbers, False
+
+
+def fit_sheet_mass(d, seq, top, blocks, bridges, numbers):
+    """A mass written on the sheet next to the sequence settles what the sequence cannot say:
+    the ends. Tries the peptide as written, then as C-terminal amide, free acid and head-to-tail."""
+    nums = [n for n in numbers if n > 150]
+    if not nums:
+        return
+    def fits(pep):
+        for n in nums:
+            for what, m in (("M", pep.mass), ("[M+H]+", pep.mass + E.PROTON)):
+                if abs(n - m) <= 0.02:
+                    return n, what
+        return None
+    got = fits(d["pep"])
+    if got:
+        d.update(sheet=got[0], sheet_note=f"= {got[1]}")
+        return
+    bare = not has_ends(seq, blocks) and not E.CYCLO_RE.match(seq)
+    one = E.read_sequence(seq, blocks)[0]
+    forms = [("linear", one + "-NH2", "as C-terminal amide"), ("linear", one, "as free acid"),
+             ("head-to-tail", one, "as head-to-tail")] if bare else []
+    for t2, s2, text in forms:
+        try:
+            pep = E.parse_sequence(s2, t2, blocks, bridges)
+        except E.UserError:
+            continue
+        got = fits(pep)
+        if got:
+            d.update(pep=pep, sequence=s2, topology=t2, sheet=got[0], sheet_note=f"= {got[1]} {text}", sheet_set=True)
+            return
+    near = min(nums, key=lambda n: abs(n - d["pep"].mass))
+    d.update(sheet=near, sheet_note=f"differs by {near - d['pep'].mass:+.3f}", sheet_bad=True)
+
+
+def parse_lines(a, blocks):
+    """Lines of pasted text -> [dict(name, sequence, topology, pep | error)]. Lines that hold no
+    sequence at all (a header row copied along) are left out and counted in 'ignored'."""
+    default = a.get("topology") if a.get("topology") in E.TOPOLOGIES else "linear"
+    bridges = (a.get("bridges") or "").strip()
+    out, ignored = [], 0
+    for line in (a.get("text") or "").replace("\r", "").split("\n"):
+        got = split_line(line, blocks)
+        if got is None:
+            continue
+        name, seq, numbers, from_cells = got
+        top = "head-to-tail" if E.CYCLO_RE.match(seq) else "linear" if has_ends(seq, blocks) else default
+        d = dict(name=name, sequence=seq, topology=top)
+        try:
+            d["pep"] = E.parse_sequence(seq, top, blocks, bridges)
+        except E.UserError as e:
+            if not re.fullmatch(r"[A-Za-z0-9()\[\]+\-]+", seq) or (not re.search(r"[A-Z]", seq)):
+                ignored += 1        # 'Sequences (1 AA per cell)', '#', notes ...
+                continue
+            d["error"] = str(e)
+        if "pep" in d:
+            if from_cells:
+                d["sequence"] = E.read_sequence(seq, blocks)[0]
+            fit_sheet_mass(d, d["sequence"], top, blocks, bridges, numbers)
+        out.append(d)
+    a["_ignored"] = ignored
+    return out
+
+
+def api_parse_sequences(a):
+    blocks = blocks_any(a)
+    rows = []
+    for d in parse_lines(a, blocks)[:2000]:
+        pep = d.pop("pep", None)
+        if pep is not None:
+            d.update(mass=round(pep.mass, 4), formula=E.hill(pep.formula), residues=len(pep.units))
+        rows.append(d)
+    return dict(rows=rows, ignored=a.get("_ignored", 0))
+
+
+def api_mass(a):
+    blocks = blocks_any(a)
+    max_z = max(1, min(12, int(a.get("max_charge") or 4)))
+    from rdkit.Chem import Descriptors
+    rows = []
+    for d in parse_lines(a, blocks)[:500]:
+        pep = d.pop("pep", None)
+        if pep is not None:
+            ions = E.make_species(pep, "none", blocks, (0, 0), max_z)[0].ions
+            d.update(mass=round(pep.mass, 4), formula=E.hill(pep.formula), residues=len(pep.units),
+                     one_letter=E.one_letter(pep), three_letter=E.three_letter(pep, blocks),
+                     ions=[[i.label, round(i.mz, 4)] for i in ions])
+            try:
+                d["average"] = round(Descriptors.MolWt(E.build_molecule(pep, blocks)), 2)
+            except Exception:
+                d["average"] = None
+        rows.append(d)
+    return dict(rows=rows)
+
+
+def api_structure(a):
+    import tempfile
+    blocks = blocks_any(a)
+    top = a.get("topology") if a.get("topology") in E.TOPOLOGIES else "linear"
+    pep = E.parse_sequence(a.get("sequence", ""), top, blocks, a.get("bridges", ""))
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        E.draw_structure(E.build_molecule(pep, blocks), t / "s.png", t / "s.svg", t / "s.mol", cyclic=pep.ringed)
+        return dict(svg=(t / "s.svg").read_text(), mol=(t / "s.mol").read_text())
+
+
 def api_deltas(a):
     folder = as_folder(a.get("folder"))
     path, blocks = blocks_for(folder)
@@ -265,6 +459,7 @@ def api_deltas(a):
     loose = [dict(code=b.code, name=b.name, mass=round(b.mass, 4), residues=b.residues)
              for b in blocks.values() if b.kind in ("shift", "adduct") and not b.group]
     builtin = [dict(name="linear", text="uncyclised precursor (+H2O), head-to-tail only"),
+               dict(name="unbridged", text="bridge not formed: reduced disulfide (+2H), open lactam (+H2O)"),
                dict(name="deletions", text="each residue missing once"),
                dict(name="insertions", text="each residue present twice"),
                dict(name="dimer", text="2M, odd charge states")]
@@ -389,9 +584,104 @@ def api_results(a):
         if mt.exists():
             with open(mt, newline="") as f:
                 r["_mz_table"] = list(csv.DictReader(f))
-    return dict(rows=rows, pptx=str(decks[0]) if decks else None,
+    pdfs = sorted(out.glob("MS_report_notebook*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return dict(rows=rows, pptx=str(decks[0]) if decks else None, pdf=str(pdfs[0]) if pdfs else None,
                 made=datetime.fromtimestamp(sp.stat().st_mtime).strftime("%d %b %Y, %H:%M"),
                 out=str(out), summary=str(sp))
+
+
+# ----------------------------------------------------------------------------
+# interactive plots: chromatogram of a sample, spectrum at any retention time
+# ----------------------------------------------------------------------------
+RUNS = {}        # (path, mtime) -> Run; the last few, so clicking along a chromatogram is quick
+
+
+def used_row(folder, sid):
+    """The row of this sample as it was when the report was made."""
+    for name in (Path(E.OUT_DIR_NAME) / "samples_used.csv", Path("samples.csv")):
+        p = folder / name
+        if p.exists():
+            for r in E.read_samples(p):
+                if r.get("id") == sid and r.get("role", "sample") != "blank":
+                    return r
+    raise E.UserError(f"sample {sid} is not in samples.csv")
+
+
+def cached_run(folder, raw_file):
+    cache = folder / E.OUT_DIR_NAME / "cache"
+    npz = cache / (Path(raw_file).stem + ".npz")
+    if not npz.exists():
+        raise E.UserError("the converted MS data of this sample is not in MS_report/cache; make the report again")
+    key = (str(npz), npz.stat().st_mtime)
+    if key not in RUNS:
+        while len(RUNS) >= 3:
+            RUNS.pop(next(iter(RUNS)))
+        with contextlib.redirect_stdout(io.StringIO()):
+            RUNS[key] = E.load_run(folder / raw_file, cache)
+    return RUNS[key]
+
+
+def thin(x, y, n=2500):
+    """Fewer points for drawing, keeping every peak top."""
+    if len(x) <= n:
+        return [round(float(v), 4) for v in x], [float(f"{v:.4g}") for v in y]
+    k = int(-(-len(x) // n))
+    idx = [s + int(y[s:s + k].argmax()) for s in range(0, len(x), k)]
+    return [round(float(x[i]), 4) for i in idx], [float(f"{y[i]:.4g}") for i in idx]
+
+
+def api_trace(a):
+    folder = as_folder(a.get("folder"))
+    sid = str(a.get("id", ""))
+    r = used_row(folder, sid)
+    run = cached_run(folder, r["raw_file"])
+    data = folder / E.OUT_DIR_NAME / "data"
+    safe = re.sub(r"[^\w.-]+", "_", sid)
+    xic = None
+    tp = data / f"{safe}_tic.csv"
+    if tp.exists():
+        with open(tp, newline="") as f:
+            rows = list(csv.DictReader(f))
+        if rows and "xic_expected_ions" in rows[0]:
+            import numpy as np
+            xic = thin(np.array([float(x["rt_min"]) for x in rows]), np.array([float(x["xic_expected_ions"]) for x in rows]))
+    blank = None
+    bp = data / f"{safe}_blank_tic.csv"
+    if bp.exists():
+        import numpy as np
+        with open(bp, newline="") as f:
+            rows = list(csv.DictReader(f))
+        blank = thin(np.array([float(x["rt_min"]) for x in rows]), np.array([float(x["tic"]) for x in rows]))
+    return dict(tic=thin(run.rt, run.tic), xic=xic, blank=blank, raw=r["raw_file"],
+                rt_range=[float(run.rt[0]), float(run.rt[-1])])
+
+
+def api_spectrum(a):
+    import numpy as np
+    folder = as_folder(a.get("folder"))
+    r = used_row(folder, str(a.get("id", "")))
+    run = cached_run(folder, r["raw_file"])
+    k = int(np.argmin(np.abs(run.rt - float(a.get("rt", 0)))))
+    lo, hi = max(0, k - 3), min(len(run.rt) - 1, k + 3)
+    smz, sint = E.averaged_spectrum(run, lo, hi)
+    if len(smz) > 5000:
+        keep = np.sort(np.argsort(sint)[-5000:])
+        smz, sint = smz[keep], sint[keep]
+    ions = []
+    try:
+        blocks = blocks_any(a)
+        pep = E.parse_sequence(r["sequence"], r["topology"], blocks, r.get("bridges", ""))
+        for sp in E.make_species(pep, r.get("find_deltas", ""), blocks, (run.scan_lo, run.scan_hi), 6):
+            for ion in sp.ions:
+                j = E.match_in_spectrum(smz, sint, ion, 5.0) if len(smz) else None
+                if j is not None:
+                    name = ion.label if sp.name == "main" or sp.carrier else f"{sp.name} {ion.label}"
+                    ions.append(dict(mz=round(float(smz[j]), 4), calc=round(ion.mz, 4), label=name, main=sp.name == "main"))
+    except E.UserError:
+        pass
+    return dict(mz=[round(float(v), 4) for v in smz], inten=[float(f"{v:.4g}") for v in sint], ions=ions,
+                rt=float(run.rt[k]), rt_from=float(run.rt[lo]), rt_to=float(run.rt[hi]),
+                mz_range=[run.scan_lo, min(run.scan_hi, 1e6)])
 
 
 # ----------------------------------------------------------------------------
@@ -549,6 +839,71 @@ def api_focus(a):
             NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         except Exception:
             pass
+        if a.get("open"):
+            show_folder(a["open"])
+    return {}
+
+
+def show_folder(path):
+    """Open a dropped folder (or the folder of a dropped file) in the window."""
+    p = Path(path).expanduser()
+    folder = p if p.is_dir() else p.parent
+    if WINDOW is not None and folder.is_dir():
+        WINDOW.evaluate_js(f"dropFolder({json.dumps(str(folder))})")
+
+
+def bind_drop():
+    """Dropping a folder on the window opens it (pywebview gives the full path of dropped items)."""
+    try:
+        from webview.dom import DOMEventHandler
+
+        def on_drop(e):
+            files = (e.get("dataTransfer") or {}).get("files") or []
+            paths = [f.get("pywebviewFullPath") for f in files if f.get("pywebviewFullPath")]
+            if paths:
+                show_folder(paths[0])
+        doc = WINDOW.dom.document
+        doc.events.dragover += DOMEventHandler(lambda e: None, True, True)
+        doc.events.drop += DOMEventHandler(on_drop, True, True)
+    except Exception as e:      # an older pywebview: Choose folder still works
+        print(f"drag and drop not available: {e}", flush=True)
+
+
+# ----------------------------------------------------------------------------
+# is there a newer version?
+# ----------------------------------------------------------------------------
+UPDATE = {"latest": None}
+
+
+def check_update():
+    """Reads the VERSION line of the published script. Nothing about this computer is sent.
+    MS_REPORT_NO_UPDATE_CHECK=1 turns it off."""
+    if os.environ.get("MS_REPORT_NO_UPDATE_CHECK"):
+        return
+    try:
+        import urllib.request
+        req = urllib.request.Request(f"https://raw.githubusercontent.com/{E.REPO}/main/make_ms_report.py",
+                                     headers={"User-Agent": "MS-Report"})
+        text = urllib.request.urlopen(req, timeout=6).read(400000).decode("utf-8", "replace")
+        m = re.search(r'^VERSION = "([0-9.]+)"', text, re.M)
+        if m:
+            UPDATE["latest"] = m.group(1)
+    except Exception:
+        pass
+
+
+def version_tuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", v or "")[:4])
+
+
+def api_update(a):
+    latest = UPDATE["latest"]
+    return dict(current=E.VERSION, latest=latest, url=f"https://github.com/{E.REPO}",
+                newer=bool(latest) and version_tuple(latest) > version_tuple(E.VERSION))
+
+
+def api_open_update(a):
+    subprocess.run(["open", f"https://github.com/{E.REPO}"])
     return {}
 
 
@@ -623,8 +978,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": False, "error": f"{type(e).__name__}: {e}"})
 
 
-def already_running():
-    """Another dashboard is open: bring it to the front and say so."""
+def already_running(folder=None):
+    """Another dashboard is open: bring it to the front (and open this folder in it) and say so."""
     try:
         info = json.loads(LOCK.read_text())
         os.kill(int(info["pid"]), 0)
@@ -632,7 +987,8 @@ def already_running():
         return False
     import urllib.request
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{info['port']}/api/focus", data=b"{}",
+        body = json.dumps({"open": str(Path(folder).expanduser().resolve())} if folder else {}).encode()
+        req = urllib.request.Request(f"http://127.0.0.1:{info['port']}/api/focus", data=body,
                                      headers={"X-Token": info["token"], "Content-Type": "application/json"})
         urllib.request.urlopen(req, timeout=2).read()
         return True
@@ -648,7 +1004,7 @@ def main():
     ap.add_argument("--folder")
     ap.add_argument("--no-open", action="store_true", help="only serve (for testing)")
     args = ap.parse_args()
-    if not args.no_open and already_running():
+    if not args.no_open and already_running(args.folder):
         print("MS Report is already open.")
         return
     token = secrets.token_urlsafe(24)
@@ -659,6 +1015,7 @@ def main():
     if args.folder:
         url += "&folder=" + __import__("urllib.parse").parse.quote(str(Path(args.folder).expanduser().resolve()))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
+    threading.Thread(target=check_update, daemon=True).start()
     try:
         E.MASTER_DIR.mkdir(parents=True, exist_ok=True)
         LOCK.write_text(json.dumps(dict(pid=os.getpid(), port=Handler.port, token=token)))
@@ -691,6 +1048,7 @@ def main():
                         AppHelper.callAfter(NSApplication.sharedApplication().setApplicationIconImage_, img)
                     except Exception:
                         pass
+            WINDOW.events.loaded += bind_drop
             webview.start(on_start)
     except KeyboardInterrupt:
         pass

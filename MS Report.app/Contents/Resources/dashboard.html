@@ -80,7 +80,7 @@ td.r, th.r { text-align: right; }
 .num { color: var(--faint); font-variant-numeric: tabular-nums; padding-top: 8px; text-align: right; }
 .mono { font-family: var(--mono); font-size: 12px; }
 #samplesTable { table-layout: fixed; min-width: 1330px; }
-#samplesTable.all { min-width: 1810px; }
+#samplesTable.all { min-width: 1930px; }
 .cell { width: 100%; border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 3px 5px; min-height: 26px; }
 .cell:hover { border-color: var(--rule); }
 .cell:focus { outline: none; border-color: var(--accent-2); background: #fff; box-shadow: 0 0 0 2px var(--accent-soft); }
@@ -157,12 +157,64 @@ details summary { cursor: pointer; color: var(--muted); margin-top: 10px; }
 .detail table td, .detail table th { position: static; padding: 3px 10px 3px 0; font-size: 12px; border-bottom: 1px solid var(--rule); background: none; }
 .detail p { margin: 0 0 12px; }
 tr.clickable { cursor: pointer; }
+#plots { margin-top: 18px; }
+#plots canvas { width: 100%; height: 230px; display: block; cursor: crosshair; }
+#plots .snote { margin: 10px 0 2px; }
 .trunc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* blocks */
 #blocksTable { table-layout: fixed; min-width: 1360px; }
 .errtext { color: var(--bad); font-size: 11.5px; }
 .note { color: var(--muted); font-size: 12px; }
+
+/* tabs that need a folder; Start only shows without one */
+nav.nofolder button[data-tab=samples], nav.nofolder button[data-tab=run], nav.nofolder button[data-tab=results],
+nav.nofolder button[data-tab=blocks], nav:not(.nofolder) button[data-tab=home] { display: none; }
+
+/* mass calculator */
+.masspage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 400px) 1fr; }
+.massin { padding: 18px 20px; border-right: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.massin h3, .massout h3 { font-size: 13px; font-weight: 600; margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+textarea.seqbox { border: 1px solid var(--rule-strong); border-radius: 6px; padding: 8px 10px; font: 12px/1.5 var(--mono); resize: vertical;
+  min-height: 190px; width: 100%; color: var(--ink); white-space: pre; overflow: auto; }
+textarea.seqbox:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent-2); }
+.fields { display: grid; grid-template-columns: auto 1fr; gap: 7px 12px; align-items: center; }
+.fields label { color: var(--muted); }
+.fields input, .fields select { border: 1px solid var(--rule-strong); border-radius: 5px; padding: 4px 7px; background: #fff; min-width: 0; }
+.massout { min-height: 0; overflow: auto; padding: 0 22px 40px; }
+.masshead { display: flex; align-items: center; gap: 10px; padding: 14px 0 10px; position: sticky; top: 0; background: #fff; z-index: 2; border-bottom: 1px solid var(--rule-strong); }
+.masshead .grow { flex: 1; }
+.mres { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.4fr); gap: 6px 24px; padding: 14px 0 16px; border-bottom: 1px solid var(--rule); }
+.mres .title { grid-column: 1 / -1; display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+.mres .title b { font-weight: 600; white-space: nowrap; }
+.mres .title span { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.mres .three { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; margin: 0 0 8px; }
+.mres dl { display: grid; grid-template-columns: 130px 1fr; gap: 3px 10px; margin: 0 0 10px; }
+.mres dt { color: var(--muted); }
+.mres dd { margin: 0; font-family: var(--mono); font-size: 12px; }
+.mres table { width: auto; }
+.mres table td, .mres table th { position: static; padding: 3px 18px 3px 0; font-size: 12px; background: none; }
+.mres table td:last-child { font-family: var(--mono); text-align: right; padding-right: 0; }
+.mres .struct { border: 1px solid var(--rule); border-radius: 8px; min-height: 150px; display: flex; align-items: center; justify-content: center; background: #fff; align-self: start; }
+.mres .struct img { width: 100%; display: block; }
+.mres.bad { grid-template-columns: 1fr; }
+.mempty { color: var(--muted); padding: 40px 0; max-width: 520px; }
+
+/* paste sequences */
+.modal.wide { width: min(1180px, 96vw); max-height: 90vh; display: flex; flex-direction: column; }
+.pgrid { display: grid; grid-template-columns: minmax(260px, 2fr) 3fr; gap: 14px; min-height: 0; flex: 1; }
+.pgrid textarea.seqbox { height: 46vh; resize: none; }
+.pprev { border: 1px solid var(--rule); border-radius: 6px; overflow: auto; height: 46vh; }
+.pprev table td, .pprev table th { padding: 4px 8px; font-size: 12px; }
+.pprev td.n { white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.pprev td.s { font-family: var(--mono); font-size: 11.5px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pprev td.e { color: var(--bad); }
+.pprev td.g { color: var(--faint); }
+.pbar { display: flex; gap: 14px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.pbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.pbar select { border: 1px solid var(--rule-strong); border-radius: 5px; background: #fff; padding: 3px 6px; }
+.pbar .grow { flex: 1; }
+.or { color: var(--faint); margin: 0 10px; }
 
 /* popover, modal, toast */
 .pop { position: fixed; z-index: 20; background: #fff; border: 1px solid var(--rule-strong); border-radius: 10px; box-shadow: 0 12px 32px rgba(10,20,30,.16);
@@ -186,16 +238,22 @@ tr.clickable { cursor: pointer; }
 #toast.on { opacity: 1; }
 iframe { border: 0; flex: 1; width: 100%; }
 .hidden { display: none !important; }
+body.dropping::after { content: 'Drop the data folder to open it'; position: fixed; inset: 10px; border: 2px dashed var(--accent-2); border-radius: 14px;
+  background: rgba(233,239,247,.88); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: var(--accent); z-index: 50; pointer-events: none; }
+#updateNote { font-size: 12px; padding-bottom: 10px; white-space: nowrap; }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">MS Report</div>
   <div class="folder" id="folderBox"></div>
-  <nav id="tabs" class="hidden">
+  <button class="link hidden" id="updateNote"></button>
+  <nav id="tabs" class="nofolder">
+    <button data-tab="home">Start</button>
     <button data-tab="samples">Samples<span class="count" id="tabSamplesCount"></span><span id="dirtyDot"></span></button>
     <button data-tab="run">Run</button>
     <button data-tab="results">Results<span class="count" id="tabResultsCount"></span></button>
+    <button data-tab="mass">Mass calculator</button>
     <button data-tab="blocks">Building blocks</button>
     <button data-tab="help">Help</button>
   </nav>
@@ -205,6 +263,7 @@ iframe { border: 0; flex: 1; width: 100%; }
   <section class="page" id="page-samples"></section>
   <section class="page" id="page-run"></section>
   <section class="page" id="page-results"></section>
+  <section class="page" id="page-mass"></section>
   <section class="page" id="page-blocks"></section>
   <section class="page" id="page-help"></section>
 </main>
@@ -244,25 +303,28 @@ const fileUrl = p => `/file?t=${encodeURIComponent(TOKEN)}&path=${encodeURICompo
 const plural = (n, w, ws) => `${n} ${n === 1 ? w : (ws || w + 's')}`;
 
 /* ------------------------------------------------------------------ tabs */
+const NO_FOLDER_TABS = ['mass', 'help'];
 function setTab(t) {
   S.tab = t;
-  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  $$('.page').forEach(p => p.classList.toggle('on', p.id === 'page-' + (S.folder ? t : 'home')));
+  const page = S.folder || NO_FOLDER_TABS.includes(t) ? t : 'home';
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === page));
+  $$('.page').forEach(p => p.classList.toggle('on', p.id === 'page-' + page));
+  if (page === 'mass') renderMass();
+  if (page === 'help') renderHelp();
   if (!S.folder) return;
   if (t === 'samples' && $('#samplesTable')) renderTable();
   if (t === 'run') renderRun();
   if (t === 'results') loadResults();
   if (t === 'blocks' && !S.blocks) loadBlocks();
-  if (t === 'help') renderHelp();
 }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
 
 function renderHeader() {
   const fb = $('#folderBox');
-  if (!S.folder) { fb.innerHTML = ''; $('#tabs').classList.add('hidden'); return; }
+  $('#tabs').classList.toggle('nofolder', !S.folder);
+  if (!S.folder) { fb.innerHTML = ''; return; }
   fb.innerHTML = `<b title="${esc(S.folder)}">${esc(S.info.name)}</b><span title="${esc(S.info.parent)}">${esc(S.info.parent)}</span>
     <button class="link" id="changeFolder">Change</button><button class="link" id="revealFolder">Show in Finder</button>`;
-  $('#tabs').classList.remove('hidden');
   $('#changeFolder').onclick = chooseFolder;
   $('#revealFolder').onclick = () => api('open', {path: S.folder});
   updateCounts();
@@ -284,9 +346,12 @@ async function renderHome() {
     <p>Choose the folder that holds the .raw files, together with the synthesis Excel sheet or a CSV of sequences.
        The report is saved inside that folder, in MS_report.</p>
     <button class="btn primary big" id="homeChoose">Choose folder…</button>
+    ${S.state.window ? '<span class="or">or drop a folder on this window</span>' : ''}
+    <span class="or">or</span><button class="link" id="homeMass">calculate masses without a folder</button>
     ${rec.length ? `<h2>Recent folders</h2><div class="recent">${rec.map(r => `<button data-path="${esc(r.path)}"><b>${esc(r.path.split('/').pop())}</b><span>${esc(r.path)}</span></button>`).join('')}</div>` : ''}
   </div></div>`;
   $('#homeChoose').onclick = chooseFolder;
+  $('#homeMass').onclick = () => setTab('mass');
   $$('#page-home .recent button').forEach(b => b.onclick = () => openFolder(b.dataset.path));
   setTab(S.tab);
 }
@@ -295,6 +360,15 @@ async function chooseFolder() {
   const r = await api('choose_folder', {start: S.folder ? S.info.parent : ''});
   if (r.ok && r.folder) openFolder(r.folder);
 }
+async function dropFolder(path) {    // called by the app when a folder is dropped on the window or its icon
+  document.body.classList.remove('dropping');
+  if (S.dirty && !(await confirmLeave())) return;
+  openFolder(path);
+}
+let dragDepth = 0;
+window.addEventListener('dragenter', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { dragDepth++; document.body.classList.add('dropping'); } });
+window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dropping'); } });
+window.addEventListener('drop', () => { dragDepth = 0; document.body.classList.remove('dropping'); });
 async function confirmLeave() {
   const v = await ask('Save changes to samples.csv?', 'You have edits that are not saved yet.',
     [{label: 'Cancel', value: 'cancel'}, {label: "Don't save", value: 'discard'}, {label: 'Save', value: 'save', primary: true}]);
@@ -322,18 +396,20 @@ function setRows(rows, extra, mtime) {
 const COLS = [
   {f: 'id', label: 'ID', w: 74, tip: 'Sample id; used in file names. Must be unique.'},
   {f: 'name', label: 'Name', w: 170, tip: 'Slide title'},
-  {f: 'sequence', label: 'Sequence', w: null, tip: 'One letter per residue; (Aib) for non-canonical; K[Biotin] for a side-chain tag; Ac-…-NH2 for the ends of a linear peptide'},
+  {f: 'sequence', label: 'Sequence', w: null, tip: 'One letter per residue; (Aib) for non-canonical; K[Biotin] for a side-chain tag; Ac-…-NH2 for the ends of a linear peptide. Three-letter codes also work: H-Ala-Gly-Lys(Biotin)-NH2'},
   {f: 'topology', label: 'Topology', w: 124, sel: true, tip: 'head-to-tail (cyclic) or linear'},
+  {f: 'bridges', label: 'Bridges', w: 104, tip: 'Optional side-chain bridges by residue position: C11-C18 for a disulfide, K3-D7 for a lactam; several separated by ", ". "disulfide" alone pairs the only two Cys.'},
   {f: 'raw_file', label: 'Raw file', w: 196, sel: true, tip: 'The MS run of this sample'},
   {f: 'blank_file', label: 'Blank', w: 150, sel: true, tip: 'Blank (solvent) run for this sample: grey trace behind the TIC, subtracted from the spectrum, and main peaks also in the blank are marked'},
   {f: 'spectrum_rt', label: 'Line at (min)', w: 92, tip: 'Optional: retention time for the red line in E and the spectrum in D. Empty = at the expected product if found, otherwise at the TIC maximum (grey line). In Results you can pick one of the biggest LC peaks.'},
   {f: 'find_deltas', label: 'Find deltas', w: 142, tip: 'What else to search for besides the expected peptide'},
   {f: 'role', label: 'Role', w: 86, sel: true, tip: 'sample, or blank (a solvent run; gets no slide)'},
   {f: 'hplc_file', label: 'HPLC file', w: 160, sel: true, more: true, tip: 'Optional 2-column export (time, absorbance) for panel B'},
+  {f: 'purity_rt', label: 'Purity peak (min)', w: 110, more: true, tip: 'Optional: retention time of the product peak in the HPLC trace. Empty = the peak with the largest area.'},
   {f: 'observed_mz', label: 'Observed m/z', w: 150, more: true, tip: 'm/z values you read yourself, separated by ;'},
   {f: 'notes', label: 'Notes', w: 220, more: true, tip: 'Free text; copied into the slide notes'},
 ];
-const TEXT_FIELDS = ['id', 'name', 'sequence', 'spectrum_rt', 'observed_mz', 'notes'];
+const TEXT_FIELDS = ['id', 'name', 'sequence', 'bridges', 'spectrum_rt', 'purity_rt', 'observed_mz', 'notes'];
 const visCols = () => COLS.filter(c => !c.more || S.allCols);
 
 function options(f, value) {
@@ -385,9 +461,11 @@ function renderSamples() {
         <div><dt>Blank runs</dt><dd>${blanks.length ? esc(blanks.join(', ')) : 'none recognised (name with H2O, blank, water, solvent or wash), you can pick one later'}</dd></div>
         <div><dt>Sequence files</dt><dd>${I.sources.length ? esc(I.sources.join(', ')) : 'none; rows are made from the raw files and you type the sequences'}</dd></div>
       </dl>
-      <button class="btn primary big" id="doSetup"${I.raw_files.length ? '' : ' disabled'}>Read sequences and match raw files</button>
+      <button class="btn ${I.sources.length ? 'primary' : ''} big" id="doSetup"${I.raw_files.length ? '' : ' disabled'}>${I.sources.length ? 'Read sequences and match raw files' : 'Make rows from the raw files'}</button>
+      <span class="or">or</span><button class="btn ${I.sources.length ? '' : 'primary'} big" id="doPaste">Paste sequences…</button>
     </div></div>`;
     $('#doSetup').onclick = () => runSetup(false);
+    $('#doPaste').onclick = openPaste;
     return;
   }
   const counts = viewCounts();
@@ -404,6 +482,7 @@ function renderSamples() {
       <div class="grow"></div>
       <button class="btn" id="sReread" title="Read the sequence file again and rebuild samples.csv (the old one is kept as samples_old.csv)">Re-read sequences…</button>
       <button class="btn" id="sExcel" title="Open samples.csv in Excel. Save there, then come back here; the table reloads.">Open in Excel</button>
+      <button class="btn" id="sPaste" title="Paste a list of sequences (one per line, or name and sequence from Excel or Word). Rows without a sequence are filled first.">Paste sequences…</button>
       <button class="btn" id="sAdd">Add row</button>
       <span class="saved" id="savedState">${S.dirty ? '' : 'Saved'}</span>
       <button class="btn primary" id="sSave" ${S.dirty ? '' : 'disabled'}>Save</button>
@@ -415,6 +494,7 @@ function renderSamples() {
   $('#allCols').onchange = e => { S.allCols = e.target.checked; $('#samplesTable').classList.toggle('all', S.allCols); renderTable(); };
   $('#sSave').onclick = saveSamples;
   $('#sAdd').onclick = addRow;
+  $('#sPaste').onclick = openPaste;
   $('#sExcel').onclick = openInExcel;
   $('#sReread').onclick = async () => {
     const v = await ask('Re-read the sequence file?', 'samples.csv is rebuilt from the Excel/CSV sequence file and the raw files. Your current samples.csv is kept as samples_old.csv.',
@@ -476,10 +556,10 @@ function paintRow(i) {
       parts.push(`${I.residues} res`, `<span class="m">${esc(I.formula)}</span>`, `M <span class="m">${I.mass.toFixed(4)}</span>`);
       (I.ions || []).slice(0, 3).forEach(([l, mz]) => parts.push(`${esc(l)} <span class="m">${mz.toFixed(4)}</span>`));
       if (I.deltas != null) parts.push(`${I.deltas} deltas`);
-      if (I.guess) parts.push('<span class="g">mass guessed until topology is set</span>');
+      if (I.guess) parts.push(`<span class="g">mass ${errs.bridges ? 'without the bridge' : 'guessed until topology is set'}</span>`);
     }
     if (v.skipped) parts.unshift('<span class="g">no raw file: skipped</span>');
-    const labels = {id: 'ID', sequence: 'Sequence', topology: 'Topology', raw_file: 'Raw file', blank_file: 'Blank', hplc_file: 'HPLC', find_deltas: 'Find deltas', observed_mz: 'Observed', role: 'Role', spectrum_rt: 'Line at'};
+    const labels = {id: 'ID', sequence: 'Sequence', topology: 'Topology', bridges: 'Bridges', raw_file: 'Raw file', blank_file: 'Blank', hplc_file: 'HPLC', find_deltas: 'Find deltas', observed_mz: 'Observed', role: 'Role', spectrum_rt: 'Line at', purity_rt: 'Purity peak'};
     const e = Object.entries(errs).map(([f, m]) => `<span class="e">${labels[f] || f}: ${esc(m)}</span>`);
     parts.unshift(...e);
   }
@@ -596,7 +676,7 @@ function newRow() {
   const blank = blanks.length ? blanks.sort((a, b) => blanks.filter(x => x === b).length - blanks.filter(x => x === a).length)[0] : (S.info.blank_guess || [''])[0] || '';
   const tops = S.rows.map(r => r.topology).filter(t => ['head-to-tail', 'linear'].includes(t));
   const topology = tops.length ? tops.sort((a, b) => tops.filter(x => x === b).length - tops.filter(x => x === a).length)[0] : '';
-  const r = {_k: ++KEY, id: String(nums.length ? Math.max(...nums) + 1 : S.rows.length + 1), name: '', sequence: '', topology, raw_file: '', blank_file: blank,
+  const r = {_k: ++KEY, id: String(nums.length ? Math.max(...nums) + 1 : S.rows.length + 1), name: '', sequence: '', topology, bridges: '', raw_file: '', blank_file: blank,
     hplc_file: '', role: 'sample', find_deltas: 'auto', observed_mz: '', notes: ''};
   S.extra.forEach(c => r[c] = '');
   return r;
@@ -759,7 +839,9 @@ function renderRun() {
       </div>
       <details style="margin-top:22px"><summary>Detection settings</summary>
         <div class="settings">
-          <span>Mass tolerance (ppm)<small>default 5; the Exploris is about 2 ppm</small></span><input id="setPpm" type="number" step="0.5" min="0.5" value="${d.ppm}">
+          <span>Instrument<small>sets the mass tolerance</small></span><select id="setInst" style="width:90px;border:1px solid var(--rule-strong);border-radius:5px;padding:4px 3px;background:#fff">
+            ${[['5', 'Orbitrap'], ['3', 'FT-ICR'], ['20', 'Q-TOF'], ['', 'Custom']].map(([v, l]) => `<option value="${v}"${(v ? +v === +d.ppm : ![5, 3, 20].includes(+d.ppm)) ? ' selected' : ''}>${l}</option>`).join('')}</select>
+          <span>Mass tolerance (ppm)<small>Orbitrap 5, FT-ICR 3, Q-TOF 20</small></span><input id="setPpm" type="number" step="0.5" min="0.5" value="${d.ppm}">
           <span>Highest charge state<small>default 6</small></span><input id="setZ" type="number" min="1" max="12" value="${d.max_charge}">
           <span>Smallest peak (% of base peak)<small>default 1</small></span><input id="setRel" type="number" step="0.5" min="0" value="${d.min_rel}">
           <span>Scans in a row needed<small>default 8</small></span><input id="setScans" type="number" min="1" value="${d.min_scans}">
@@ -775,7 +857,10 @@ function renderRun() {
   const rc = $('#runCancel'); if (rc) rc.onclick = () => api('cancel');
   const saveSet = () => { const s = runSettings(); S.state.settings = s; api('remember_settings', s); };
   ['setPpm', 'setZ', 'setRel', 'setScans'].forEach(id => $('#' + id).onchange = saveSet);
-  $('#setReset').onclick = () => { const D = st.defaults; $('#setPpm').value = D.ppm; $('#setZ').value = D.max_charge; $('#setRel').value = D.min_rel; $('#setScans').value = D.min_scans; saveSet(); };
+  const instOf = v => [5, 3, 20].includes(+v) ? String(+v) : '';
+  $('#setInst').onchange = e => { if (e.target.value) { $('#setPpm').value = e.target.value; saveSet(); } };
+  $('#setPpm').addEventListener('input', e => { $('#setInst').value = instOf(e.target.value); });
+  $('#setReset').onclick = () => { const D = st.defaults; $('#setPpm').value = D.ppm; $('#setZ').value = D.max_charge; $('#setRel').value = D.min_rel; $('#setScans').value = D.min_scans; $('#setInst').value = instOf(D.ppm); saveSet(); };
   if (S.lastRun) paintRunStatus(S.lastRun);
 }
 function runSettings() { return {ppm: +$('#setPpm').value, max_charge: +$('#setZ').value, min_rel: +$('#setRel').value, min_scans: +$('#setScans').value}; }
@@ -842,7 +927,7 @@ async function loadResults(quiet) {
 const FOUND = {yes: 'found', weak: 'weak', no: 'not found'};
 const RCOLS = [
   {k: 'id', l: 'ID'}, {k: 'name', l: 'Name'}, {k: 'found', l: 'Expected'}, {k: 'rt_min', l: 'RT (min)', n: true, c: 'r'},
-  {k: 'ions_found', l: 'Ions'}, {k: 'mean_ppm', l: 'ppm', n: true, c: 'r'}, {k: 'strongest', l: 'Strongest species'},
+  {k: 'ions_found', l: 'Ions'}, {k: 'mean_ppm', l: 'ppm', n: true, c: 'r'}, {k: 'purity_pct', l: 'Purity %', n: true, c: 'r', tip: 'Area of the product peak in the HPLC trace, as a percentage of all integrated peaks'}, {k: 'strongest', l: 'Strongest species'},
   {k: 'delta_hits', l: 'Delta hits', n: true, c: 'r', tip: 'Confident delta hits; in brackets the same search with another peptide\'s sequence (chance level)'},
   {k: 'main_peaks', l: 'Biggest LC peak'}, {k: 'blank', l: 'Blank'}];
 function renderResults() {
@@ -861,10 +946,10 @@ function renderResults() {
       <div class="stat" title="Treat delta hits as leads, not proof"><b>${own}</b><span>delta hits · ${chance} by chance</span></div>
       <div class="grow"></div>
       <span class="note">Made ${esc(R.made)}</span>
-      ${R.pptx ? '<button class="btn primary" id="rDeck">Open slides</button>' : ''}<button class="btn" id="rCsv">Open summary.csv</button><button class="btn" id="rFolder">Show in Finder</button>
+      ${R.pptx ? '<button class="btn primary" id="rDeck">Open slides</button>' : ''}${R.pdf ? '<button class="btn" id="rPdf" title="The same report as a PDF, for the lab notebook">Open PDF</button>' : ''}<button class="btn" id="rCsv">Open summary.csv</button><button class="btn" id="rFolder">Show in Finder</button>
     </div>
     <div class="toolbar"><div class="chips" id="rChips">${['all', 'yes', 'weak', 'no'].map(k => `<button class="chip ${S.resFilter === k ? 'on' : ''}" data-k="${k}">${k === 'all' ? 'All ' + rows.length : FOUND[k] + ' ' + n(k)}</button>`).join('')}</div>
-      <span class="note">Click a row for the m/z table, main peaks and structure.</span></div>
+      <span class="note">Click a row for the m/z table, main peaks, structure and the zoomable chromatogram and spectrum.</span></div>
     <div class="scroll"><table id="resTable"><thead><tr>${RCOLS.map(c => `<th data-sort="${c.k}" class="${c.c || ''}" title="${esc(c.tip || 'Sort')}">${c.l}${S.resSort && S.resSort.k === c.k ? (S.resSort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead>
     <tbody>${list.map(r => resRow(r)).join('')}</tbody></table></div>`;
   $('#rChips').onclick = e => { const b = e.target.closest('.chip'); if (b) { S.resFilter = b.dataset.k; renderResults(); } };
@@ -873,6 +958,9 @@ function renderResults() {
   $$('[data-rtset]').forEach(b => b.onclick = () => setLine(b.dataset.rtset, $('[data-rtfor]').value.trim()));
   $$('[data-rtclear]').forEach(b => b.onclick = () => setLine(b.dataset.rtclear, ''));
   $$('[data-rtuse]').forEach(b => b.onclick = () => setLine(b.dataset.rtuse, b.dataset.rt));
+  $$('#resTable tr.detail').forEach(tr => tr.onclick = e => e.stopPropagation());
+  const open = S.resOpen && rows.find(x => x.id === S.resOpen); if (open) mountPlots(open);
+  const pd = $('#rPdf'); if (pd) pd.onclick = () => api('open', {path: R.pdf});
   const d = $('#rDeck'); if (d) d.onclick = () => api('open', {path: R.pptx});
   $('#rCsv').onclick = () => api('open', {path: R.summary, excel: true});
   $('#rFolder').onclick = () => api('open', {path: R.out, reveal: false});
@@ -901,7 +989,7 @@ function resRow(r) {
   const ch = r.delta_hits_with_wrong_sequence;
   const row = `<tr class="clickable" data-id="${esc(r.id)}">
     <td>${esc(r.id)}</td><td>${esc(r.name)}</td><td><span class="pill ${esc(r.found)}">${FOUND[r.found] || esc(r.found)}</span></td>
-    <td class="r">${esc(r.rt_min)}</td><td class="mono">${esc(r.ions_found)}</td><td class="r">${esc(r.mean_ppm)}</td><td>${esc(r.strongest)}</td>
+    <td class="r">${esc(r.rt_min)}</td><td class="mono">${esc(r.ions_found)}</td><td class="r">${esc(r.mean_ppm)}</td><td class="r">${esc(r.purity_pct || '')}</td><td>${esc(r.strongest)}</td>
     <td class="r">${esc(r.delta_hits)}${ch !== '' && ch != null ? ` <span class="note">(${esc(ch)})</span>` : ''}</td>
     <td><div class="trunc" title="${esc(r.main_peaks)}">${esc(peak)}</div></td><td class="note">${esc((r.blank || '').replace(/\.raw$/i, ''))}</td></tr>`;
   if (S.resOpen !== r.id) return row;
@@ -918,8 +1006,127 @@ function resRow(r) {
       <p>${lineText(r)}</p>
       <h4>Biggest LC peaks</h4>${mp.length ? `<table><thead><tr><th></th>${PEAKCOLS.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
         mp.map(x => `<tr><td><button class="link" data-rtuse="${esc(r.id)}" data-rt="${esc(x.rt_min)}" title="Put the red line and the spectrum at this peak">use</button></td>${PEAKCOLS.map(c => `<td>${esc(x[c])}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">none</p>'}
-    </div></div></td></tr>`;
+    </div></div>
+    <div id="plots"><h4>Chromatogram and spectrum</h4><p class="note pnote"></p>
+      <canvas id="pChrom"></canvas><p class="note snote"></p><canvas id="pSpec"></canvas></div></td></tr>`;
 }
+
+/* ------------------------------------------------------------------ interactive plots */
+function niceTicks(a, b, n = 6) {
+  const span = b - a; if (!(span > 0)) return [a];
+  const step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), f = step0 / mag;
+  const step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag, out = [];
+  for (let v = Math.ceil(a / step) * step; v <= b + step * 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+/* A zoomable line/stick plot on a canvas. Drag sideways to zoom, double-click to reset, click to pick. */
+function makePlot(canvas, opt) {
+  const P = {opt, x0: opt.xlim[0], x1: opt.xlim[1], drag: null, hover: null};
+  const M = {l: 54, r: 14, t: 18, b: 34};
+  const ctx = canvas.getContext('2d');
+  const size = () => { const r = canvas.getBoundingClientRect(), d = window.devicePixelRatio || 1; canvas.width = r.width * d; canvas.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); return r; };
+  const X = (v, w) => M.l + (v - P.x0) / (P.x1 - P.x0) * (w - M.l - M.r);
+  const inv = (px, w) => P.x0 + (px - M.l) / (w - M.l - M.r) * (P.x1 - P.x0);
+  P.draw = () => {
+    const {width: w, height: h} = size(), o = P.opt;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = '11px -apple-system, Helvetica, sans-serif';
+    const ph = h - M.t - M.b;
+    let ymax = 0;      // tallest visible point of the first series decides the scale
+    o.series.forEach((s, si) => { let m = 0; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= P.x0 && s.x[i] <= P.x1 && s.y[i] > m) m = s.y[i]; s._vis = m; if (si === 0 || s.share) ymax = Math.max(ymax, m); });
+    ymax = (ymax || 1) * 1.18;
+    const Y = v => M.t + ph - v / ymax * ph;
+    ctx.fillStyle = '#f6f7f9'; ctx.fillRect(M.l, M.t, w - M.l - M.r, ph);
+    ctx.strokeStyle = '#cfd4da'; ctx.lineWidth = 1; ctx.strokeRect(M.l + .5, M.t + .5, w - M.l - M.r, ph);
+    ctx.fillStyle = '#5f6b76'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    niceTicks(P.x0, P.x1, Math.max(3, Math.floor(w / 110))).forEach(v => { const x = X(v, w); ctx.fillText(String(v), x, h - M.b + 6); ctx.beginPath(); ctx.moveTo(x, h - M.b); ctx.lineTo(x, h - M.b + 4); ctx.stroke(); });
+    ctx.fillText(o.xlabel, M.l + (w - M.l - M.r) / 2, h - 14);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    niceTicks(0, ymax / 1.18, 4).forEach(v => { ctx.fillText(v >= 1e4 ? v.toExponential(1) : String(v), M.l - 6, Y(v)); });
+    ctx.save(); ctx.beginPath(); ctx.rect(M.l, M.t, w - M.l - M.r, ph); ctx.clip();
+    o.series.forEach((s, si) => {
+      const k = si === 0 || s.share ? 1 : (s._vis ? (ymax / 1.18) / s._vis : 1);   // other traces are scaled to fit
+      ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 1; ctx.beginPath();
+      if (s.sticks) { for (let i = 0; i < s.x.length; i++) { const v = s.x[i]; if (v < P.x0 || v > P.x1) continue; const x = X(v, w); ctx.moveTo(x, Y(0)); ctx.lineTo(x, Y(s.y[i] * k)); } }
+      else { let on = false; for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i], w), y = Y(s.y[i] * k); if (on) ctx.lineTo(x, y); else { ctx.moveTo(x, y); on = true; } } }
+      ctx.stroke();
+    });
+    (o.vlines || []).forEach(v => { if (v.x == null) return; ctx.strokeStyle = v.color; ctx.lineWidth = 1; ctx.setLineDash(v.dash || []); ctx.beginPath(); ctx.moveTo(X(v.x, w), M.t); ctx.lineTo(X(v.x, w), M.t + ph); ctx.stroke(); ctx.setLineDash([]); });
+    ctx.restore();
+    // labels: marked ions first, then the tallest other peaks in view, none overlapping
+    const boxes = [], put = (x, y, text, color) => {
+      const tw = ctx.measureText(text).width, bx = x - tw / 2 - 2, by = y - 13;
+      if (bx < M.l || bx + tw + 4 > w - M.r || by < 2 || boxes.some(b => bx < b[0] + b[2] && bx + tw + 4 > b[0] && by < b[1] + 12 && by + 12 > b[1])) return;
+      boxes.push([bx, by, tw + 4]); ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(text, x, y - 2);
+    };
+    (o.marks || []).filter(m => m.x >= P.x0 && m.x <= P.x1).sort((a, b) => b.y - a.y).forEach(m => put(X(m.x, w), Y(m.y), m.label, m.color));
+    if (o.labelTop) { const s = o.series[0], idx = []; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= P.x0 && s.x[i] <= P.x1) idx.push(i);
+      idx.sort((a, b) => s.y[b] - s.y[a]).slice(0, 40).forEach(i => { if (boxes.length < o.labelTop + (o.marks || []).length && s.y[i] > 0.02 * ymax) put(X(s.x[i], w), Y(s.y[i]), s.x[i].toFixed(o.digits ?? 2), '#16191d'); }); }
+    if (P.drag && Math.abs(P.drag.b - P.drag.a) > 3) { ctx.fillStyle = 'rgba(11,74,143,.14)'; ctx.fillRect(Math.min(P.drag.a, P.drag.b), M.t, Math.abs(P.drag.b - P.drag.a), ph); }
+    if (P.hover != null && !P.drag) { const s = o.series[0]; let best = -1, bd = 1e9; for (let i = 0; i < s.x.length; i++) { const d = Math.abs(X(s.x[i], w) - P.hover); if (d < bd || (o.series[0].sticks && d < 4 && s.y[i] > s.y[best])) { if (d < 4 || d < bd) { bd = Math.min(bd, d); best = i; } } }
+      if (best >= 0) { ctx.fillStyle = '#16191d'; ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText(`${o.xname} ${s.x[best].toFixed(o.digits ?? 2)}   ${s.y[best].toExponential(2)}`, w - M.r - 4, 3); } }
+    else if (o.title) { ctx.fillStyle = '#5f6b76'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(o.title, M.l, 3); }
+    if (P.x0 > o.xlim[0] || P.x1 < o.xlim[1]) { ctx.fillStyle = '#0b4a8f'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; if (P.hover != null) ctx.fillText('double-click: full range', M.l, 3); }
+  };
+  const px = e => e.clientX - canvas.getBoundingClientRect().left;
+  canvas.onmousedown = e => { P.drag = {a: px(e), b: px(e)}; };
+  canvas.onmousemove = e => { if (P.drag) P.drag.b = px(e); P.hover = px(e); P.draw(); };
+  canvas.onmouseleave = () => { P.hover = null; if (P.drag) P.drag = null; P.draw(); };
+  canvas.onmouseup = e => {
+    const d = P.drag; P.drag = null; if (!d) return;
+    d.b = px(e);
+    const w = canvas.getBoundingClientRect().width;
+    if (Math.abs(d.b - d.a) > 5) { const a = inv(Math.min(d.a, d.b), w), b = inv(Math.max(d.a, d.b), w); P.x0 = Math.max(P.opt.xlim[0], a); P.x1 = Math.min(P.opt.xlim[1], b); }
+    else if (P.opt.onPick) P.opt.onPick(inv(d.b, w));
+    P.draw();
+  };
+  canvas.ondblclick = () => { P.x0 = P.opt.xlim[0]; P.x1 = P.opt.xlim[1]; P.draw(); };
+  P.draw();
+  return P;
+}
+const PLOTS = {traces: {}, rt: {}, spec: null, chrom: null};
+async function mountPlots(r) {
+  const box = $('#plots'); if (!box) return;
+  const id = r.id;
+  let T = PLOTS.traces[id];
+  if (!T) {
+    box.querySelector('.pnote').textContent = 'Reading the run…';
+    T = await api('trace', {id});
+    if (!$('#plots') || S.resOpen !== id) return;
+    if (!T.ok) { box.querySelector('.pnote').textContent = T.error; return; }
+    PLOTS.traces[id] = T;
+  }
+  const sr = S.rows.find(x => x.id === id);
+  const lineRt = sr && sr.spectrum_rt ? +sr.spectrum_rt : (r.rt_min ? +r.rt_min : null);
+  if (PLOTS.rt[id] == null) PLOTS.rt[id] = lineRt != null ? lineRt : T.tic[0][T.tic[1].indexOf(Math.max(...T.tic[1]))];
+  const series = [{x: T.tic[0], y: T.tic[1], color: '#16191d', width: 1}];
+  if (T.blank) series.push({x: T.blank[0], y: T.blank[1], color: '#9aa0a6', width: 1, share: true});
+  if (T.xic && T.xic[1].some(v => v > 0)) series.push({x: T.xic[0], y: T.xic[1], color: '#c00000', width: 1});
+  const chrom = () => makePlot($('#pChrom'), {xlim: T.rt_range, series, xlabel: 'Time (min)', xname: 'RT', digits: 2,
+    title: `TIC${T.blank ? ', blank in grey' : ''}${series.length > (T.blank ? 2 : 1) ? ', expected ions in red (own scale)' : ''}. Click a peak for its spectrum; drag to zoom.`,
+    vlines: [{x: lineRt, color: '#c00000'}, {x: PLOTS.rt[id], color: '#0b4a8f', dash: [4, 3]}],
+    onPick: rt => { PLOTS.rt[id] = rt; PLOTS.chrom.opt.vlines[1].x = rt; PLOTS.chrom.draw(); loadSpectrum(id); }});
+  PLOTS.chrom = chrom();
+  box.querySelector('.pnote').textContent = '';
+  loadSpectrum(id);
+}
+async function loadSpectrum(id) {
+  const rt = PLOTS.rt[id];
+  const sp = await api('spectrum', {id, rt});
+  if (!$('#pSpec') || S.resOpen !== id || PLOTS.rt[id] !== rt) return;
+  const note = $('#plots .snote');
+  if (!sp.ok) { note.textContent = sp.error; return; }
+  const top = Math.max(...sp.inten, 0);
+  const marks = sp.ions.map(i => ({x: i.mz, y: sp.inten[sp.mz.indexOf(i.mz)] || 0, label: `${i.label} ${i.mz.toFixed(4)}`, color: i.main ? '#c00000' : '#1a7f37'}));
+  const keep = PLOTS.spec && PLOTS.spec.id === id ? [PLOTS.spec.x0, PLOTS.spec.x1] : null;     // keep the zoom while clicking along
+  PLOTS.spec = makePlot($('#pSpec'), {xlim: sp.mz_range, series: [{x: sp.mz, y: sp.inten, color: '#16191d', sticks: true, width: 1}], xlabel: 'm/z', xname: 'm/z', digits: 4,
+    marks, labelTop: 8, title: `Spectrum averaged ${sp.rt_from.toFixed(2)} to ${sp.rt_to.toFixed(2)} min. Expected ions in red, deltas in green.`});
+  PLOTS.spec.id = id;
+  if (keep) { PLOTS.spec.x0 = keep[0]; PLOTS.spec.x1 = keep[1]; PLOTS.spec.draw(); }
+  note.innerHTML = `Spectrum at <b>${sp.rt.toFixed(2)} min</b>${top ? '' : ' (empty)'}. <button class="link" id="pUse">Put the red line and the slide's spectrum here</button>`;
+  $('#pUse').onclick = () => setLine(id, sp.rt.toFixed(2));
+}
+window.addEventListener('resize', () => { if (S.tab === 'results') { PLOTS.chrom && $('#pChrom') && PLOTS.chrom.draw(); PLOTS.spec && $('#pSpec') && PLOTS.spec.draw(); } });
 
 /* ------------------------------------------------------------------ building blocks */
 const KINDS = ['residue', 'n_cap', 'c_cap', 'tag', 'adduct', 'shift'];
@@ -1001,6 +1208,194 @@ async function saveBlocks(force = false) {
   toast('Saved building_blocks.csv'); validate();
 }
 
+/* ------------------------------------------------------------------ paste sequences */
+const normName = x => String(x || '').toLowerCase().replace(/\.(raw|mzml)$/, '').replace(/[^a-z0-9]/g, '');
+function nameScore(name, other) {   // how well a pasted name fits a raw file / row name
+  const n = normName(name), m = normName(other);
+  if (!n || !m) return 0;
+  if (n === m) return 3;
+  if (/^\d+$/.test(n)) { const t = m.match(/(\d+)$/); return t && +t[1] === +n ? 2 : 0; }
+  return n.length >= 3 && (m.includes(n) || (m.length >= 3 && n.includes(m))) ? 1 : 0;
+}
+function planPaste(items, mode) {   // for each pasted line: the row it fills, or the raw file its new row gets
+  const isBlank = r => (r.role || 'sample') === 'blank';
+  const blankGuess = new Set(S.info.blank_guess || []);
+  const targets = S.rows.filter(r => !isBlank(r) && !String(r.sequence || '').trim());
+  const held = new Set(S.rows.map(r => r.raw_file).filter(Boolean));
+  const free = (S.info.raw_files || []).filter(f => !held.has(f) && !blankGuess.has(f));
+  const usedT = new Set(), usedF = new Set();
+  const best = (list, used, score) => { let b = null, bs = 0; list.forEach(x => { if (used.has(x)) return; const v = score(x); if (v > bs) { b = x; bs = v; } }); return b; };
+  return items.map(it => {
+    let row = null, raw = '';
+    if (mode === 'name') {
+      row = best(targets, usedT, r => Math.max(nameScore(it.name, r.raw_file), nameScore(it.name, r.name), nameScore(it.name, r.id)));
+      if (!row) raw = best(free, usedF, f => nameScore(it.name, f)) || '';
+    } else {
+      row = targets.find(r => !usedT.has(r)) || null;
+      if (!row) raw = free.find(f => !usedF.has(f)) || '';
+    }
+    if (row) { usedT.add(row); raw = row.raw_file || ''; } else if (raw) usedF.add(raw);
+    return {row, raw};
+  });
+}
+function openPaste() {
+  const tops = S.rows.map(r => r.topology).filter(Boolean);
+  const top0 = tops.length && tops.filter(t => t === 'head-to-tail').length > tops.length / 2 ? 'head-to-tail' : 'linear';
+  const v = document.createElement('div'); v.className = 'veil';
+  v.innerHTML = `<div class="modal wide" role="dialog" aria-modal="true"><h3>Paste sequences</h3>
+    <p>One sequence per line, or rows copied straight from Excel or Word: name and sequence, or a batch sheet with one residue per cell. ${S.rows.some(r => (r.role || 'sample') !== 'blank' && !String(r.sequence || '').trim()) ? 'Rows that have no sequence yet are filled first; the rest become new rows.' : 'Each line becomes a row.'}</p>
+    <div class="pgrid"><textarea class="seqbox" id="pText" spellcheck="false" placeholder="Ac-KGG-NH2&#10;Peptide 2&#9;RMNEILDFIDPRFISNDP&#10;H-Ala-Gly-Lys(Biotin)-NH2"></textarea>
+      <div class="pprev" id="pPrev"></div></div>
+    <div class="pbar">
+      <label title="Sequences with their ends written (Ac-…-NH2) are always linear">Topology <select id="pTop"><option${top0 === 'linear' ? ' selected' : ''}>linear</option><option${top0 === 'head-to-tail' ? ' selected' : ''}>head-to-tail</option></select></label>
+      <label title="In order: first line with the first raw file. By name: the name on the line against the raw file names.">Match raw files <select id="pMatch"><option value="order">in order</option><option value="name">by name</option></select></label>
+      <span class="note" id="pNote"></span><div class="grow"></div>
+      <button class="btn" id="pCancel">Cancel</button><button class="btn primary" id="pAdd" disabled>Add</button>
+    </div></div>`;
+  document.body.appendChild(v);
+  let items = [], ignored = 0, seq = 0, timer = null, touchedMatch = false;
+  const close = () => { v.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  const paint = () => {
+    const mode = $('#pMatch', v).value, plan = planPaste(items, mode);
+    const bad = items.filter(i => i.error).length, matched = plan.filter(x => x.raw).length;
+    const sheet = items.some(i => i.sheet != null);
+    $('#pPrev', v).innerHTML = items.length ? `<table><thead><tr><th class="r">#</th><th>Name</th><th>Sequence</th><th class="r">M (mono)</th>${sheet ? '<th title="A mass found on the pasted line. When the sequence has no ends written, it decides between free acid, C-terminal amide and head-to-tail.">Mass on the sheet</th>' : ''}<th>Raw file</th></tr></thead><tbody>${
+      items.map((it, k) => `<tr><td class="num" style="padding-top:4px">${k + 1}</td><td class="n">${esc(it.name)}</td><td class="s" title="${esc(it.sequence)}">${esc(it.sequence)}</td>${
+        it.error ? `<td class="e" colspan="1" title="${esc(it.error)}">${esc(it.error)}</td>` : `<td class="r mono">${it.mass.toFixed(4)}</td>`}${sheet ? `<td class="${it.sheet_bad ? 'e' : it.sheet == null ? 'g' : ''}" style="white-space:nowrap">${it.sheet != null ? `${it.sheet.toFixed(4)} ${esc(it.sheet_note)}` : ''}</td>` : ''}<td class="${plan[k].raw ? '' : 'g'}">${esc(plan[k].raw || 'none')}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="note" style="padding:14px">The sequences appear here with their masses as you paste or type.</p>';
+    $('#pNote', v).textContent = items.length ? `${plural(items.length, 'sequence')}, ${matched} with a raw file${bad ? `, ${bad} to fix` : ''}${items.filter(i => i.sheet_bad).length ? `, ${items.filter(i => i.sheet_bad).length} not matching the sheet's mass` : ''}${ignored ? `; ${plural(ignored, 'line')} without a sequence left out` : ''}` : (ignored ? `${plural(ignored, 'line')} without a sequence left out` : '');
+    const b = $('#pAdd', v); b.disabled = !items.length; b.textContent = items.length ? `Add ${plural(items.length, 'sequence')}` : 'Add';
+  };
+  const parse = async () => {
+    const my = ++seq, r = await api('parse_sequences', {text: $('#pText', v).value, topology: $('#pTop', v).value});
+    if (my !== seq || !v.isConnected) return;
+    if (!r.ok) { toast(r.error, 5000); return; }
+    items = r.rows; ignored = r.ignored || 0;
+    if (!touchedMatch) {   // by name when the names fit the files better than chance
+      const byName = planPaste(items, 'name').filter(x => x.raw).length;
+      $('#pMatch', v).value = items.length && byName >= Math.max(1, items.length / 2) ? 'name' : 'order';
+    }
+    paint();
+  };
+  $('#pText', v).oninput = () => { clearTimeout(timer); timer = setTimeout(parse, 250); };
+  $('#pTop', v).onchange = parse;
+  $('#pMatch', v).onchange = () => { touchedMatch = true; paint(); };
+  $('#pCancel', v).onclick = close;
+  $('#pAdd', v).onclick = async () => { const mode = $('#pMatch', v).value; close(); await applyPaste(items, mode); };
+  paint();
+  $('#pText', v).focus();
+}
+async function applyPaste(items, mode) {
+  const plan = planPaste(items, mode), wasNew = !S.info.has_samples;
+  let added = 0, filled = 0;
+  items.forEach((it, k) => {
+    let r = plan[k].row;
+    if (r) filled++;
+    else {
+      r = newRow(); r.raw_file = plan[k].raw; added++;
+      const fb = S.rows.findIndex(x => (x.role || 'sample') === 'blank');
+      if (fb >= 0) S.rows.splice(fb, 0, r); else S.rows.push(r);
+    }
+    r.sequence = it.sequence; r.topology = it.topology;
+    if (/^\d+$/.test(it.name || '')) {   // a row number from the sheet is the id, not the title
+      if (!plan[k].row && !S.rows.some(x => x !== r && x.id === it.name)) r.id = it.name;
+      if (!r.name || !plan[k].row) r.name = r.raw_file ? r.raw_file.replace(/\.[^.]+$/, '').replace(/_/g, ' ') : `Peptide ${r.id}`;
+    } else if (it.name) r.name = it.name;
+    else if (!r.name) r.name = r.raw_file ? r.raw_file.replace(/\.[^.]+$/, '').replace(/_/g, ' ') : `Peptide ${r.id}`;
+  });
+  if (wasNew) {   // a new folder: the blank runs get their rows too
+    (S.info.blank_guess || []).forEach((f, n) => {
+      const b = newRow();
+      Object.assign(b, {id: n ? `blank${n + 1}` : 'blank', name: f.replace(/\.[^.]+$/, '').replace(/_/g, ' '), raw_file: f, role: 'blank', blank_file: '', find_deltas: '', topology: ''});
+      S.rows.push(b);
+    });
+    S.info.has_samples = true; S.dirty = true;
+    if (await saveSamples()) await reloadSamples();
+    renderHeader();
+  } else { S.val = []; S.view = 'all'; S.filter = ''; markDirty(); renderSamples(); validate(); }
+  const noRaw = plan.filter(x => !x.raw).length;
+  toast(`${plural(items.length, 'sequence')}: ${filled ? `${filled} filled in, ` : ''}${added} new row${added === 1 ? '' : 's'}${noRaw ? `; ${noRaw} without a raw file` : ''}. Check the raw files, then Run.`, 6000);
+}
+
+/* ------------------------------------------------------------------ mass calculator */
+const M = {text: '', topology: 'linear', bridges: '', z: 4, rows: [], svg: {}, seq: 0, timer: null, error: ''};
+try { Object.assign(M, JSON.parse(localStorage.getItem('massCalc') || '{}')); } catch (e) {}
+function renderMass() {
+  const P = $('#page-mass');
+  if ($('#mText', P)) return;
+  P.innerHTML = `<div class="masspage">
+    <div class="massin">
+      <h3>Sequences</h3>
+      <textarea class="seqbox" id="mText" spellcheck="false" placeholder="One per line, with or without a name&#10;&#10;Ac-KGG-NH2&#10;thanatin  GSKKPVPIIYCNRRTGKCQRM">${esc(M.text)}</textarea>
+      <div class="fields">
+        <label for="mTop" title="Sequences with their ends written (Ac-…-NH2) are always linear">Topology</label>
+        <select id="mTop"><option${M.topology === 'linear' ? ' selected' : ''}>linear</option><option${M.topology === 'head-to-tail' ? ' selected' : ''}>head-to-tail</option></select>
+        <label for="mBridges" title="Side-chain bridges by residue position, for every line: C11-C18 for a disulfide, K3-D7 for a lactam; &quot;disulfide&quot; pairs the only two Cys">Bridges</label>
+        <input id="mBridges" value="${esc(M.bridges)}" placeholder="none, or C11-C18" spellcheck="false" autocomplete="off">
+        <label for="mZ">Charges up to</label>
+        <input id="mZ" type="number" min="1" max="12" value="${+M.z || 4}" style="width:70px">
+      </div>
+      <p class="note">One letter per residue; other residues in round brackets, (Aib); a side-chain tag in square brackets, K[Biotin]; ends with dashes, Ac-…-NH2. Or three-letter codes: H-Ala-Gly-Lys(Biotin)-NH2, cyclo(-Arg-Gly-Asp-Phe-Val-). A linear peptide without ends written is H-…-OH. Residues and tags come from Building blocks.</p>
+    </div>
+    <div class="massout" id="mOut"></div></div>`;
+  const go = () => { clearTimeout(M.timer); M.timer = setTimeout(calcMass, 250); };
+  $('#mText').oninput = go; $('#mBridges').oninput = go; $('#mZ').oninput = go; $('#mTop').onchange = calcMass;
+  $('#mOut').addEventListener('click', e => {
+    const b = e.target.closest('[data-struct]'); if (b) loadStructure(+b.dataset.struct);
+    if (e.target.closest('#mCopy')) copyMassTable();
+  });
+  calcMass();
+}
+async function calcMass() {
+  Object.assign(M, {text: $('#mText').value, topology: $('#mTop').value, bridges: $('#mBridges').value.trim(), z: Math.max(1, Math.min(12, +$('#mZ').value || 4))});
+  try { localStorage.setItem('massCalc', JSON.stringify({text: M.text, topology: M.topology, bridges: M.bridges, z: M.z})); } catch (e) {}
+  const my = ++M.seq;
+  const r = M.text.trim() ? await api('mass', {text: M.text, topology: M.topology, bridges: M.bridges, max_charge: M.z}) : {ok: true, rows: []};
+  if (my !== M.seq) return;
+  M.rows = r.ok ? r.rows : []; M.error = r.ok ? '' : r.error;
+  paintMass();
+  if (M.rows.length <= 6) M.rows.forEach((x, i) => { if (!x.error) loadStructure(i); });
+}
+const structKey = x => [x.sequence, x.topology, M.bridges].join('|');
+function paintMass() {
+  const O = $('#mOut'); if (!O) return;
+  if (M.error) { O.innerHTML = `<div class="warnbox" style="margin-top:18px">${esc(M.error)}</div>`; return; }
+  if (!M.rows.length) { O.innerHTML = '<p class="mempty">Type or paste sequences on the left. Formula, monoisotopic and average mass, m/z for each charge state and the structure appear here. No data folder is needed.</p>'; return; }
+  const ok = M.rows.filter(x => !x.error).length;
+  O.innerHTML = `<div class="masshead"><h3>${plural(ok, 'peptide')}${ok < M.rows.length ? ` · ${M.rows.length - ok} to fix` : ''}</h3><div class="grow"></div>
+      <button class="btn" id="mCopy" ${ok ? '' : 'disabled'} title="Copy every line as a table to paste into Excel">Copy as table</button></div>` +
+    M.rows.map((x, i) => x.error
+      ? `<div class="mres bad"><div class="title"><b>${esc(x.name || 'Line ' + (i + 1))}</b><span>${esc(x.sequence)}</span></div><div class="errtext">${esc(x.error)}</div></div>`
+      : `<div class="mres"><div class="title"><b>${esc(x.name || 'Line ' + (i + 1))}</b><span>${esc(x.one_letter)}</span></div>
+          <div><p class="three">${esc(x.three_letter)}</p>
+            <dl><dt>Formula</dt><dd>${esc(x.formula)}</dd><dt>Monoisotopic mass</dt><dd>${x.mass.toFixed(4)}</dd>
+              <dt>Average mass</dt><dd>${x.average != null ? x.average.toFixed(2) : ''}</dd><dt>Residues</dt><dd>${x.residues}</dd></dl>
+            <table><thead><tr><th>Ion</th><th class="r">m/z</th></tr></thead><tbody>${x.ions.map(([l, mz]) => `<tr><td>[${esc(l)}]<sup>${l.includes('H') && /\d/.test(l) ? l.match(/(\d+)H/)[1] : ''}+</sup></td><td>${mz.toFixed(4)}</td></tr>`).join('')}</tbody></table></div>
+          <div class="struct" id="mStruct${i}">${M.svg[structKey(x)] ? structImg(M.svg[structKey(x)]) : `<button class="link" data-struct="${i}">Show structure</button>`}</div></div>`).join('');
+}
+const structImg = svg => `<img alt="Structure" src="data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}">`;
+async function loadStructure(i) {
+  const x = M.rows[i]; if (!x || x.error) return;
+  const key = structKey(x), box = () => $('#mStruct' + i);
+  if (!M.svg[key]) {
+    if (box()) box().innerHTML = '<span class="note">Drawing…</span>';
+    const r = await api('structure', {sequence: x.sequence, topology: x.topology, bridges: M.bridges});
+    if (!r.ok) { if (box() && M.rows[i] === x) box().innerHTML = `<span class="errtext" style="padding:8px">${esc(r.error)}</span>`; return; }
+    M.svg[key] = r.svg;
+  }
+  if (box() && M.rows[i] === x) box().innerHTML = structImg(M.svg[key]);
+}
+async function copyMassTable() {
+  const good = M.rows.filter(x => !x.error), labels = good.length ? good[0].ions.map(i => `[${i[0]}]`) : [];
+  const text = [['Name', 'Sequence', 'Formula', 'Monoisotopic mass', 'Average mass', ...labels].join('\t'),
+    ...good.map(x => [x.name, x.one_letter, x.formula, x.mass.toFixed(4), x.average != null ? x.average.toFixed(2) : '', ...x.ions.map(i => i[1].toFixed(4))].join('\t'))].join('\n');
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  toast(`Copied ${plural(good.length, 'row')}; paste into Excel`);
+}
+
 /* ------------------------------------------------------------------ help */
 function renderHelp() {
   const P = $('#page-help');
@@ -1013,6 +1408,10 @@ window.addEventListener('beforeunload', e => { if (S.dirty || S.bDirty) { e.prev
   S.state = await api('state');
   const f = new URLSearchParams(location.search).get('folder');
   if (f) await openFolder(f); else { renderHeader(); renderHome(); }
+  setTimeout(async () => {     // a newer version on GitHub?
+    const u = await api('update', {folder: undefined});
+    if (u.ok && u.newer) { const b = $('#updateNote'); b.textContent = `Version ${u.latest} is available`; b.title = `You have ${u.current}. Click to open the download page.`; b.classList.remove('hidden'); b.onclick = () => api('open_update', {folder: undefined}); }
+  }, 4000);
 })();
 </script>
 </body>

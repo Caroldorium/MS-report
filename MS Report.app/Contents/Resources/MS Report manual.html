@@ -38,20 +38,24 @@
 <h3>Install the app (once)</h3>
 <ol>
   <li>Unzip <b>MS Report for Mac.zip</b> and drag <b>MS Report</b> into Applications.</li>
-  <li>Double-click it. If macOS says it cannot verify the app, click <b>Done</b>, open <b>System Settings &rsaquo; Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</li>
-  <li>Click <b>Install</b> and wait 2-5 minutes (internet and about 600 MB of disk space; no administrator password).</li>
+  <li>Double-click it. The app is not signed with an Apple developer certificate, so the first time macOS refuses to open it. Click <b>Done</b>, open <b>System Settings &rsaquo; Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>. On macOS 14 and older, right-click the app and choose <b>Open</b> instead. This is needed once.</li>
+  <li>Click <b>Install</b> and wait 2-5 minutes (internet and about 600 MB of disk space; no administrator password). A progress window shows which of the four steps is running; the third is the long one.</li>
   <li>If macOS asks whether MS Report may use your Downloads, Documents or Desktop folder, click <b>Allow</b>.</li>
 </ol>
 <h3>Each experiment</h3>
 <ol>
   <li>Put the <b>.raw</b> files, a water/blank run (name containing <code>H2O</code> or <code>blank</code>) and the peptide list in one folder.
       The list is either the batch synthesis Excel sheet (3-letter codes, one per cell, numbered rows) or a .csv with one-letter sequences.</li>
-  <li>Open MS Report and click <b>Choose folder</b> (or a recent folder).</li>
-  <li>For a new folder, click <b>Read sequences and match raw files</b>. The <b>Samples</b> tab then lists every peptide.</li>
+  <li>Open MS Report and click <b>Choose folder</b> (or a recent folder), or drop the folder on the window or on the app icon.</li>
+  <li>For a new folder, click <b>Read sequences and match raw files</b>, or <b>Paste sequences</b> if there is no list file (see below). The <b>Samples</b> tab then lists every peptide.</li>
   <li>Check the table: <b>Topology</b> for every row, the <b>Raw file</b> and the <b>Blank</b>. Rows with a problem have a red edge and say what is wrong; <b>Needs fixing</b> shows only those. Click <b>Save</b>.</li>
   <li>In the <b>Run</b> tab click <b>Make report</b>. When it is ready, click <b>Open slides</b>, or look through the <b>Results</b> tab.</li>
 </ol>
 <div class="note">Everything is written to <b>MS_report</b> inside the data folder. The table is the file <code>samples.csv</code> in the data folder; <b>Open in Excel</b> opens it there, and the window reloads it when you come back.</div>
+<h3>Paste sequences</h3>
+<p><b>Paste sequences…</b> (on the new-folder screen and above the table) takes one sequence per line, or rows copied straight from Excel or Word: name and sequence, or a batch synthesis sheet with one residue per cell (select the rows, numbers included, and copy). A header row copied along is left out. If a line carries a mass (the sheet's calculated M or [M+H]<sup>+</sup>), it is compared with the sequence: for a sequence without written ends it decides between free acid, C-terminal amide and head-to-tail, and a mass that fits none of them is shown in red. Masses and errors show as you type. Raw files are matched <b>in order</b> or <b>by name</b>; rows that have no sequence yet are filled first and the rest become new rows. Sequences without written ends get the topology chosen in the box.</p>
+<h3>Mass calculator</h3>
+<p>The <b>Mass calculator</b> tab needs no folder. Type or paste sequences to get the formula, monoisotopic and average mass, m/z per charge state and the structure. <b>Bridges</b> applies to every line. <b>Copy as table</b> copies all lines for Excel.</p>
 <h3>Working with many samples</h3>
 <ul>
   <li><b>Change many rows at once:</b> tick the rows (shift-click ticks a range, the box in the header ticks every row shown), then use the blue bar: Topology, Blank, Role, Find deltas, or Delete rows.</li>
@@ -68,11 +72,13 @@
   <tr><td>id</td><td>Short unique label, used in file names.</td><td><code>7</code></td></tr>
   <tr><td>name</td><td>Slide title.</td><td><code>De novo canonical 7</code></td></tr>
   <tr><td>sequence</td><td>The peptide (section 3).</td><td><code>Ac-QHREDGK[Biotin]-NH2</code></td></tr>
-  <tr><td>topology</td><td><b>Required.</b> <code>linear</code> or <code>head-to-tail</code>.</td><td><code>head-to-tail</code></td></tr>
+  <tr><td>topology</td><td><b>Required.</b> The backbone: <code>linear</code> or <code>head-to-tail</code>.</td><td><code>head-to-tail</code></td></tr>
+  <tr><td>bridges</td><td>Optional side-chain bridges, by residue position; several separated by <code>, </code>. Two Cys make a disulfide (&minus;2H); Lys with Asp or Glu makes a lactam (&minus;H<sub>2</sub>O); two olefin residues such as <code>(S5)</code> or <code>(R8)</code> make a hydrocarbon staple (&minus;C<sub>2</sub>H<sub>4</sub>). <code>disulfide</code> alone pairs the only two Cys. Works with either topology. Example, thanatin: <code>GSKKPVPIIYCNRRTGKCQRM</code>, linear, <code>C11-C18</code>.</td><td><code>C11-C18</code></td></tr>
   <tr><td>raw_file</td><td>The .raw (or .mzML) file. Rows without one are skipped.</td><td><code>De_novo_canonical_7.raw</code></td></tr>
   <tr><td>blank_file</td><td>The blank (solvent) run for this sample; any .raw in the folder, so different samples can have different blanks. Its TIC is drawn in grey behind panel E on the sample's scale, its spectrum over the same time window is subtracted from panel D, and main peaks also present in the blank are marked. Empty = no blank. Setup fills in the blank it recognises (<code>auto</code> = the first row with role blank).</td><td><code>H2O.raw</code></td></tr>
   <tr><td>spectrum_rt</td><td>Optional: retention time in minutes for the line in panel E and the spectrum in panel D. Empty = at the expected product when it is found; otherwise at the largest TIC peak (grey line). In the window: the <b>Line at</b> column, or <b>use</b> next to a peak in Results.</td><td><code>4.93</code></td></tr>
-  <tr><td>hplc_file</td><td>Optional HPLC export: two columns, time and absorbance (.csv/.txt). Without one, panel B shows a zoom on the product's isotope peaks instead.</td><td><code>pep7_214nm.csv</code></td></tr>
+  <tr><td>hplc_file</td><td>Optional HPLC export: two columns, time and absorbance (.csv/.txt). Panel B then shows the trace and the <b>purity</b>: the area of the product peak as a percentage of all integrated peaks, with the baseline in grey and the product peak in red. Without one, panel B shows the isotope zoom.</td><td><code>pep7_214nm.txt</code></td></tr>
+  <tr><td>purity_rt</td><td>Optional: retention time (min) of the product peak in the HPLC trace. Empty = the peak with the largest area. The HPLC run is usually not the MS run, so the product peak is not looked up from the MS data.</td><td><code>14.2</code></td></tr>
   <tr><td>role</td><td><code>sample</code>, or <code>blank</code> for a solvent run (no slide; pick it as blank_file).</td><td><code>sample</code></td></tr>
   <tr><td>find_deltas</td><td>What else to look for (section 4). Setup writes <code>auto</code>.</td><td><code>auto</code></td></tr>
   <tr><td>observed_mz</td><td>Optional m/z values you read yourself, separated by <code>;</code>. Each goes to the nearest calculated ion (within 20 ppm) and is shown in table C instead of the script's value.</td><td><code>839.4310; 559.9561</code></td></tr>
@@ -87,6 +93,9 @@
   <tr><td>A tag on a side chain: square brackets right after the residue</td><td><code>K[Biotin]</code>, <code>K[TAMRA]</code></td></tr>
   <tr><td>Ends of a linear peptide, with dashes (default <code>H-</code> and <code>-OH</code>)</td><td><code>Ac-QHREDGSGSGK-NH2</code></td></tr>
   <tr><td>A head-to-tail peptide has no ends written</td><td><code>LGFDFKNRPDMSRI</code></td></tr>
+  <tr><td>Three-letter codes with dashes, as on vendor and synthesis sheets; a tag in round brackets after its residue</td><td><code>H-Ala-Gly-Lys(Biotin)-NH2</code></td></tr>
+  <tr><td><code>cyclo(...)</code> around either form means head-to-tail</td><td><code>cyclo(-Arg-Gly-Asp-Phe-Val-)</code></td></tr>
+  <tr><td>Three-letter codes are read as written in Building blocks (<code>Ala</code> or <code>ala</code>); capitals are one-letter, so <code>ALA</code> is Ala-Leu-Ala. <code>D-Phe</code> needs its own row (code <code>dF</code>).</td><td></td></tr>
 </table>
 <p>Lower-case letters are not defined. For D-amino acids, add rows such as <code>dF</code> to building_blocks.csv and write <code>(dF)</code>.</p>
 
@@ -98,6 +107,7 @@
   <tr><td><code>all</code></td><td>Every delta in building_blocks.csv, whatever the sequence. Most thorough, most chance hits.</td></tr>
   <tr><td><code>none</code></td><td>Only the expected peptide.</td></tr>
   <tr><td><code>linear</code></td><td>The uncyclised precursor of a head-to-tail peptide (+H<sub>2</sub>O).</td></tr>
+  <tr><td><code>unbridged</code></td><td>A bridge that did not form: reduced disulfide (+2H), open lactam (+H<sub>2</sub>O), unstapled (+C<sub>2</sub>H<sub>4</sub>). The reduced form is only reported when it is taller than the product's own M+2 isotope peak, which sits 9 mDa away.</td></tr>
   <tr><td><code>deletions</code></td><td>Each residue of the sequence missing once (incomplete coupling).</td></tr>
   <tr><td><code>insertions</code></td><td>Each residue present twice (double coupling).</td></tr>
   <tr><td><code>dimer</code></td><td>2M (odd charge states only; even ones sit on top of the monomer).</td></tr>
@@ -145,12 +155,20 @@ FAM,,5-Carboxyfluorescein (amide),tag,C21H10O6,[*:1]C(=O)c1ccc2c(c1)C(=O)OC21c2c
   <tr><td>E</td><td>Total ion chromatogram, the blank in grey. Red line: where the product elutes (labelled <i>cyclic 4.53</i>). Grey line: the product was not found and D shows the largest TIC peak. Labelled <i>set by user</i> when spectrum_rt is filled.</td></tr>
 </table>
 <p>All charts are native PowerPoint charts: right-click &rsaquo; Edit Data, or click a label to move or delete it. Labels never overlap; a label that would not fit is left out (the slide says so for expected ions).</p>
+<h3>Overview slide and PDF</h3>
+<p>The first slide lists every sample: found or not, retention time, ppm error, purity when there is an HPLC trace, and the confident delta hits. <b>MS_report_notebook.pdf</b> is the same report as a PDF for the lab notebook (an overview page, then one page per sample); <b>Open PDF</b> in the Results tab opens it. The PDF is a copy: edit the slides, not the PDF.</p>
+<h3>Purity</h3>
+<p>Purity is area % at the recorded wavelength, nothing more. The baseline is a smooth curve fitted under the trace, peaks are the stretches above three times the noise, overlapping peaks are cut at the valley between them, and the first minute (the injection front) is left out. The peak list is in <code>data/&lt;id&gt;_hplc_peaks.csv</code>. On test traces with known areas the result was within about 1 point; two cases are less exact: a shoulder cut at the valley (a few points) and a step in the baseline at the wash, which is counted as a peak.</p>
+<h3>Looking at the data in the window</h3>
+<p>In <b>Results</b>, click a row. Under the tables are the chromatogram (TIC, blank in grey, expected ions in red on their own scale) and a spectrum. Drag sideways to zoom, double-click for the full range, and click a peak in the chromatogram to see its spectrum (averaged over 7 scans). Expected ions are labelled in red and delta hits in green. <b>Put the red line and the slide's spectrum here</b> saves that time as <code>spectrum_rt</code>.</p>
 <h3>When is something "found"?</h3>
 <p>An ion counts when its monoisotopic peak, its first <sup>13</sup>C peak (at the ratio the formula predicts) and, for larger peptides, the second <sup>13</sup>C peak are within 5 ppm, in at least 8 consecutive scans, at 1% of the base peak or more.
 In summary.csv, <b>yes</b> means 2 or more charge states, or one at 5% of the base peak or more. <b>weak</b> means one charge state below 5%; unrelated peptides reach this level by chance, so it is not proof.</p>
 <h3>Output files (MS_report folder)</h3>
 <table>
   <tr><td>MS_report.pptx</td><td>The slides; the notes under each slide list the details.</td></tr>
+  <tr><td>MS_report_notebook.pdf</td><td>The same report as a PDF. A PDF you export from PowerPoint yourself is not touched.</td></tr>
+  <tr><td>data/&lt;id&gt;_hplc_peaks.csv</td><td>Every integrated HPLC peak with its area and area %; the product peak is marked.</td></tr>
   <tr><td>summary.csv</td><td>One line per sample: found or not, retention time, ppm, delta hits (with the chance level), main peaks.</td></tr>
   <tr><td>data/&lt;id&gt;_mz_table.csv</td><td>Table C including weak hits.</td></tr>
   <tr><td>data/&lt;id&gt;_main_peaks.csv</td><td>The biggest LC peaks: mass, difference from the expected mass, possible explanations, and whether it is also in the blank.</td></tr>
@@ -158,12 +176,12 @@ In summary.csv, <b>yes</b> means 2 or more charge states, or one at 5% of the ba
   <tr><td>data/&lt;id&gt;.mol / .svg / _structure.png</td><td>Structure for ChemDraw / as vector art / as a picture.</td></tr>
 </table>
 
-<h2 id="terminal">7. Terminal use (Carlos)</h2>
+<h2 id="terminal">7. Terminal use</h2>
 <pre>cd "&lt;data folder&gt;"            # with make_ms_report.py copied into it
 python3 make_ms_report.py        # setup the first time, then the report
 python3 make_ms_report.py help   # full list of commands and options
 
-python3 ~/Downloads/MSdata/Script/dashboard.py --browser   # the MS Report window, in the web browser</pre>
+python3 "&lt;script folder&gt;/dashboard.py" --browser   # the MS Report window, in the web browser</pre>
 <table>
   <tr><th>Command</th><th>Does</th></tr>
   <tr><td><code>setup</code></td><td>Rewrite samples.csv from the .xlsx/.csv (the old one is kept as samples_old.csv).</td></tr>
@@ -173,6 +191,10 @@ python3 ~/Downloads/MSdata/Script/dashboard.py --browser   # the MS Report windo
   <tr><td><code>blocks</code> / <code>deltas</code></td><td>List the building blocks / what find_deltas can search for.</td></tr>
 </table>
 <p>The window and Terminal run the same script, so they give the same report. After changing <code>make_ms_report.py</code>, <code>dashboard.py</code>, <code>dashboard.html</code> or <code>building_blocks.csv</code> in the Script folder, rebuild the app and zip with <code>bash ~/Downloads/MSdata/Script/app_source/build_app.sh</code>.</p>
+
+<h3>Instrument and updates</h3>
+<p>In <b>Run &rsaquo; Detection settings</b>, <b>Instrument</b> sets the mass tolerance: Orbitrap 5 ppm, FT-ICR 3 ppm, Q-TOF 20 ppm. Thermo .raw files are converted by the app; data from other instruments must be given as centroided .mzML. Only Orbitrap data has been tested.</p>
+<p>When a newer version is on GitHub, the top bar says so; click it for the download page. The check reads one file from <code>github.com/Caroldorium/MS-report</code> and sends nothing about your computer.</p>
 
 <h2 id="trouble">8. Troubleshooting</h2>
 <table>
@@ -184,7 +206,7 @@ python3 ~/Downloads/MSdata/Script/dashboard.py --browser   # the MS Report windo
   <tr><td>Problems in building_blocks.csv</td><td>The message names the line and the reason (e.g. structure and formula disagree).</td></tr>
   <tr><td>No raw files (new folder)</td><td>Choose the folder that holds the .raw files.</td></tr>
   <tr><td>samples.csv changed on disk</td><td>It was edited in Excel while the window had unsaved edits. Choose which version to keep.</td></tr>
-  <tr><td>The window does not open</td><td>Open MS Report again. If it still fails, send Carlos the file <code>Documents/MS Report/dashboard.log</code>.</td></tr>
+  <tr><td>The window does not open</td><td>Open MS Report again. If it still fails, report it at <code>github.com/Caroldorium/MS-report/issues</code> and attach the file <code>Documents/MS Report/dashboard.log</code>.</td></tr>
 </table>
 </main>
 </body>

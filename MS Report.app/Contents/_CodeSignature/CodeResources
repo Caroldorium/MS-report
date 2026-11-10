@@ -6,7 +6,7 @@
 	<dict>
 		<key>Resources/MS Report manual.html</key>
 		<data>
-		04m9NBxHfdtC7SISiEiYCQzR5Q8=
+		/9+oRUDamDAF5hpxUUWFbJ1xiy0=
 		</data>
 		<key>Resources/MS Report.icns</key>
 		<data>
@@ -14,35 +14,35 @@
 		</data>
 		<key>Resources/Scripts/main.scpt</key>
 		<data>
-		vl33RZLEZ3jmBXes5xJZu4g4RLc=
-		</data>
-		<key>Resources/applet.icns</key>
-		<data>
-		z4FvxSU8BvQ4+1/X9FAlAIfujho=
-		</data>
-		<key>Resources/applet.rsrc</key>
-		<data>
-		ar5xmDs9mPpaINVXiVlVqUCB8ao=
+		HrRrRr2XN9OUfOafdTCVfZy6wgc=
 		</data>
 		<key>Resources/building_blocks.csv</key>
 		<data>
-		bIW7P01qZR1Qz8HDYmtMq3HHL5Q=
+		IohYy6SCCTINz+sHmg7IHwhyHyE=
 		</data>
 		<key>Resources/dashboard.html</key>
 		<data>
-		NOnBTpOrRxrE6j/QzhuYwXx2aGU=
+		LwoMhuluIPGBS7uj8Mmxy6sgDig=
 		</data>
 		<key>Resources/dashboard.py</key>
 		<data>
-		3jp//uFhOPWM8U458ULeRWxyC+8=
+		RlpehGjVIDl8cQ6mouGb9t4lYwE=
+		</data>
+		<key>Resources/droplet.icns</key>
+		<data>
+		z4FvxSU8BvQ4+1/X9FAlAIfujho=
+		</data>
+		<key>Resources/droplet.rsrc</key>
+		<data>
+		ar5xmDs9mPpaINVXiVlVqUCB8ao=
 		</data>
 		<key>Resources/make_ms_report.py</key>
 		<data>
-		cDJfQd3pMCRBEfZGVcU1o6qK4FQ=
+		/ZvpIW3FZ8nEjgRPFN2JdnOr2DI=
 		</data>
 		<key>Resources/msreport.sh</key>
 		<data>
-		zMfvm7y4Zo4Uc0zJJM+Io+ifkjA=
+		CT+5VODsthrMA1khTwZLF17RGjQ=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -51,11 +51,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			04m9NBxHfdtC7SISiEiYCQzR5Q8=
+			/9+oRUDamDAF5hpxUUWFbJ1xiy0=
 			</data>
 			<key>hash2</key>
 			<data>
-			OeDocqEdXZUd8ZJCCjsVBK7YrRS2huQiHwOfcPBsUnU=
+			Pnx9pBg+0KNjmWxymEdtMtv5s8JGzehWl0Y+Q0xIAUk=
 			</data>
 		</dict>
 		<key>Resources/MS Report.icns</key>
@@ -73,14 +73,47 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			vl33RZLEZ3jmBXes5xJZu4g4RLc=
+			HrRrRr2XN9OUfOafdTCVfZy6wgc=
 			</data>
 			<key>hash2</key>
 			<data>
-			XMpr4pfLm3KgITD7jh+DleOkRNNQKOXDBwVM4mVFmU8=
+			a5nyzTaqooEo0B6l0Ooqu40ZzOTgIXesJXG1DauaauY=
 			</data>
 		</dict>
-		<key>Resources/applet.icns</key>
+		<key>Resources/building_blocks.csv</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			IohYy6SCCTINz+sHmg7IHwhyHyE=
+			</data>
+			<key>hash2</key>
+			<data>
+			nflodQEGbPZCDE4ER5cfXB6D8Zm9AOy1L/YbZDUheL0=
+			</data>
+		</dict>
+		<key>Resources/dashboard.html</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			LwoMhuluIPGBS7uj8Mmxy6sgDig=
+			</data>
+			<key>hash2</key>
+			<data>
+			u5lqmAwwhUJlzPty4tzNS7QxftHRzq9li67FJOMTFUU=
+			</data>
+		</dict>
+		<key>Resources/dashboard.py</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			RlpehGjVIDl8cQ6mouGb9t4lYwE=
+			</data>
+			<key>hash2</key>
+			<data>
+			WnBwub73MlT35GZTPlH5HAvxu7rN8G/2b1uG74PCJ3U=
+			</data>
+		</dict>
+		<key>Resources/droplet.icns</key>
 		<dict>
 			<key>hash</key>
 			<data>
@@ -91,7 +124,7 @@
 			bUCtzfXdh8ikos9vkLX/kG3cpdm7T/24EdgvrEhtF9Y=
 			</data>
 		</dict>
-		<key>Resources/applet.rsrc</key>
+		<key>Resources/droplet.rsrc</key>
 		<dict>
 			<key>hash</key>
 			<data>
@@ -102,59 +135,26 @@
 			NV2dNLwgykV7aWfTBywUILBA9Lidl7F51PrkQw77SbM=
 			</data>
 		</dict>
-		<key>Resources/building_blocks.csv</key>
-		<dict>
-			<key>hash</key>
-			<data>
-			bIW7P01qZR1Qz8HDYmtMq3HHL5Q=
-			</data>
-			<key>hash2</key>
-			<data>
-			vvZklsH1nRvfGCsz8RaTosgXla31ckmbIVKtdW6g5Eg=
-			</data>
-		</dict>
-		<key>Resources/dashboard.html</key>
-		<dict>
-			<key>hash</key>
-			<data>
-			NOnBTpOrRxrE6j/QzhuYwXx2aGU=
-			</data>
-			<key>hash2</key>
-			<data>
-			7tWuBcGMiqymZjw049ngLPgim9uIFPiKJIsiI79FZpY=
-			</data>
-		</dict>
-		<key>Resources/dashboard.py</key>
-		<dict>
-			<key>hash</key>
-			<data>
-			3jp//uFhOPWM8U458ULeRWxyC+8=
-			</data>
-			<key>hash2</key>
-			<data>
-			BbBii22klDw7PHtx4gRnZ3yKeYd5YAByEHOWIP2inDY=
-			</data>
-		</dict>
 		<key>Resources/make_ms_report.py</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			cDJfQd3pMCRBEfZGVcU1o6qK4FQ=
+			/ZvpIW3FZ8nEjgRPFN2JdnOr2DI=
 			</data>
 			<key>hash2</key>
 			<data>
-			Z8XfYjjQ2+xKLb0C6nQsfQGHA5SLf4+oxy1iZpS0k6o=
+			eTcY/n4XO8t3MP91lyxgOpX59rVFOkPAGbwz48fjTrU=
 			</data>
 		</dict>
 		<key>Resources/msreport.sh</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			zMfvm7y4Zo4Uc0zJJM+Io+ifkjA=
+			CT+5VODsthrMA1khTwZLF17RGjQ=
 			</data>
 			<key>hash2</key>
 			<data>
-			pS9jC102s9oRgo9rtiyKvLBE3N3EGjY9N6QA1k5Gq+Q=
+			qr8u97uXQH33yobA1TI84mN4sfx0n6Y44zEj2IwOJl0=
 			</data>
 		</dict>
 	</dict>

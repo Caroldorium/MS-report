@@ -19,6 +19,21 @@ F,Phe,Phenylalanine,residue,C9H9NO,[*:1]N[C@@H](Cc1ccccc1)C(=O)[*:2],,,
 R,Arg,Arginine,residue,C6H12N4O,[*:1]N[C@@H](CCCNC(=N)N)C(=O)[*:2],,,
 Y,Tyr,Tyrosine,residue,C9H9NO2,[*:1]N[C@@H](Cc1ccc(O)cc1)C(=O)[*:2],,,
 W,Trp,Tryptophan,residue,C11H10N2O,[*:1]N[C@@H](Cc1c[nH]c2ccccc12)C(=O)[*:2],,,
+Aib,Aib,2-Aminoisobutyric acid,residue,C4H7NO,[*:1]NC(C)(C)C(=O)[*:2],,,
+Mox,Mox,Methoxinine (O-methylhomoserine),residue,C5H9NO2,[*:1]N[C@@H](CCOC)C(=O)[*:2],,,
+Nle,Nle,Norleucine,residue,C6H11NO,[*:1]N[C@@H](CCCC)C(=O)[*:2],,,
+Nva,Nva,Norvaline,residue,C5H9NO,[*:1]N[C@@H](CCC)C(=O)[*:2],,,
+Abu,Abu,2-Aminobutyric acid,residue,C4H7NO,[*:1]N[C@@H](CC)C(=O)[*:2],,,
+Orn,Orn,Ornithine,residue,C5H10N2O,[*:1]N[C@@H](CCCN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Dab,Dab,"2,4-Diaminobutyric acid",residue,C4H8N2O,[*:1]N[C@@H](CCN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Dap,Dap,"2,3-Diaminopropionic acid",residue,C3H6N2O,[*:1]N[C@@H](CN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Cit,Cit,Citrulline,residue,C6H11N3O2,[*:1]N[C@@H](CCCNC(N)=O)C(=O)[*:2],,,
+Hyp,Hyp,4-Hydroxyproline,residue,C5H7NO2,[*:1]N1C[C@H](O)C[C@H]1C(=O)[*:2],,,
+Sar,Sar,Sarcosine (N-methylglycine),residue,C3H5NO,[*:1]N(C)CC(=O)[*:2],,,
+S5,S5,(S)-2-(4-Pentenyl)alanine (stapling),residue,C8H13NO,[*:1]N[C@@](C)(CCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+R5,R5,(R)-2-(4-Pentenyl)alanine (stapling),residue,C8H13NO,[*:1]N[C@](C)(CCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+S8,S8,(S)-2-(7-Octenyl)alanine (stapling),residue,C11H19NO,[*:1]N[C@@](C)(CCCCCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+R8,R8,(R)-2-(7-Octenyl)alanine (stapling),residue,C11H19NO,[*:1]N[C@](C)(CCCCCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
 H-,,Free amine (N-terminus),n_cap,H,[H][*:1],,,default N-terminus of a linear peptide
 Ac-,,Acetyl (N-terminus),n_cap,C2H3O,CC(=O)[*:1],,,
 -OH,,Free acid (C-terminus),c_cap,HO,O[*:2],,,default C-terminus of a linear peptide

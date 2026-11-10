@@ -4,6 +4,8 @@
 #   msreport.sh installed_before      -> "yes" if an older version was installed (update, not first install)
 #   msreport.sh dashboard             -> opens the MS Report window (dashboard.py) and returns
 #   msreport.sh install               -> one-time install (uv + Python packages + ThermoRawFileParser)
+#   msreport.sh install_bg            -> the same in the background, for the progress window
+#   msreport.sh install_status        -> "step|what it is doing", "done" or "failed|why"
 #   msreport.sh state  <folder>       -> new | samples | noraw
 #   msreport.sh setup|check|run <folder>
 #   msreport.sh open_csv <folder>     -> open samples.csv in Excel (or the default app)
@@ -15,7 +17,9 @@ UV="$HOME/.local/bin/uv"
 TRFP_DIR="$HOME/software/ThermoRawFileParser"
 TRFP="$TRFP_DIR/ThermoRawFileParser"
 TRFP_URL="https://github.com/CompOmics/ThermoRawFileParser/releases/download/v.2.0.0-dev"
-MARKER="$APP_HOME/.installed-v2"      # v2: dashboard (pywebview) packages
+MARKER="$APP_HOME/.installed-v3"      # v2: dashboard (pywebview) packages; v3: matplotlib for the PDF
+INSTALL_LOG="$APP_HOME/install.log"
+INSTALL_PID="$APP_HOME/.install.pid"
 export MS_REPORT_HOME="$APP_HOME"
 export PATH="$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -51,10 +55,12 @@ installed_before)
 install)
     set -e
     mkdir -p "$APP_HOME"
+    echo "STEP 1|Getting the Python installer (uv)"
     if [ ! -x "$UV" ]; then
         echo "Installing uv ..."
         curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
     fi
+    echo "STEP 2|Getting the reader for .raw files (ThermoRawFileParser)"
     if [ ! -x "$TRFP" ]; then
         echo "Installing ThermoRawFileParser ..."
         if [ "$(uname -m)" = "arm64" ]; then zip=ThermoRawFileParser-v.2.0.0-dev-osx-arm64.zip
@@ -74,11 +80,27 @@ install)
         "$TRFP" --version >/dev/null
     fi
     sync_blocks
-    echo "Installing Python packages ..."
+    echo "STEP 3|Downloading the chemistry and plotting packages (the long part)"
     "$UV" run --quiet --python 3.12 "$RES/make_ms_report.py" blocks >/dev/null
+    echo "STEP 4|Downloading the window packages"
     "$UV" run --quiet --python 3.12 "$RES/dashboard.py" --help >/dev/null     # window packages
     touch "$MARKER"
     echo "done"
+    ;;
+install_bg)
+    mkdir -p "$APP_HOME"
+    : > "$INSTALL_LOG"
+    nohup /bin/bash "$0" install >"$INSTALL_LOG" 2>&1 </dev/null &
+    echo $! > "$INSTALL_PID"
+    ;;
+install_status)
+    if [ "$(tail -1 "$INSTALL_LOG" 2>/dev/null)" = "done" ]; then echo done
+    elif [ -f "$INSTALL_PID" ] && kill -0 "$(cat "$INSTALL_PID")" 2>/dev/null; then
+        step=$(grep '^STEP ' "$INSTALL_LOG" 2>/dev/null | tail -1)
+        if [ -n "$step" ]; then echo "${step#STEP }"; else echo "0|Starting"; fi
+    else
+        echo "failed|$(grep -v '^STEP ' "$INSTALL_LOG" 2>/dev/null | tail -4 | tr '\n' ' ')"
+    fi
     ;;
 state)
     d="$2"
@@ -100,7 +122,12 @@ run)
 dashboard)
     sync_blocks
     log="$APP_HOME/dashboard.log"
-    nohup "$UV" run --quiet --python 3.12 "$RES/dashboard.py" >"$log" 2>&1 </dev/null &
+    if [ -n "${2:-}" ]; then      # a folder (or a file in it) dropped on the app icon
+        target="$2"; [ -d "$target" ] || target="$(dirname "$target")"
+        nohup "$UV" run --quiet --python 3.12 "$RES/dashboard.py" --folder "$target" >"$log" 2>&1 </dev/null &
+    else
+        nohup "$UV" run --quiet --python 3.12 "$RES/dashboard.py" >"$log" 2>&1 </dev/null &
+    fi
     pid=$!
     for _ in $(seq 1 80); do     # wait until the window is up (or an open one was brought forward)
         if grep -qE "MS Report dashboard:|already open" "$log" 2>/dev/null; then exit 0; fi
@@ -112,5 +139,5 @@ open_csv)
     open -b com.microsoft.Excel "$2/samples.csv" 2>/dev/null || open "$2/samples.csv"
     ;;
 *)
-    echo "usage: msreport.sh ready|installed_before|install|dashboard|state|setup|check|run|open_csv [folder]" >&2; exit 2 ;;
+    echo "usage: msreport.sh ready|installed_before|install|install_bg|install_status|dashboard|state|setup|check|run|open_csv [folder]" >&2; exit 2 ;;
 esac

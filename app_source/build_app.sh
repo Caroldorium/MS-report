@@ -11,7 +11,9 @@ osacompile -o "$APP" "$SRC/main.applescript"
 R="$APP/Contents/Resources"
 cp "$SRC/msreport.sh" "$SRC/MS Report manual.html" "$SRC/MS Report.icns" \
    "$OUT/make_ms_report.py" "$OUT/dashboard.py" "$OUT/dashboard.html" "$OUT/building_blocks.csv" "$R/"
-cp "$SRC/MS Report.icns" "$R/applet.icns"          # the app's own icon instead of the script icon
+ICON="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$APP/Contents/Info.plist")"   # applet, or droplet once the script has "on open"
+rm -f "$R/applet.icns" "$R/droplet.icns"
+cp "$SRC/MS Report.icns" "$R/$ICON.icns"            # the app's own icon instead of the script icon
 rm -f "$R/Assets.car"                                # its icon would win over applet.icns
 /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$APP/Contents/Info.plist" 2>/dev/null || true
 chmod +x "$R/msreport.sh"

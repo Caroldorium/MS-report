@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.10,<3.14"
-# dependencies = ["numpy", "openpyxl", "pyteomics", "psims", "lxml", "rdkit", "python-pptx"]
+# dependencies = ["numpy", "openpyxl", "pyteomics", "psims", "lxml", "rdkit", "python-pptx", "matplotlib"]
 # ///
 """make_ms_report.py - one-command LC-MS report for synthesised peptides.
 
@@ -57,7 +57,10 @@ HOW "FOUND" IS DECIDED
   --folder PATH       work on another folder instead of the one this script is in
 
 OUTPUT  (MS_report/ inside the data folder)
-  MS_report.pptx      one slide per sample, everything editable:
+  MS_report_notebook.pdf   the same report as a PDF for the lab notebook: an overview page,
+                      then one page per sample (not editable; the .pptx is the working copy)
+  MS_report.pptx      an overview slide (every sample: found or not, retention time, ppm error,
+                      purity), then one slide per sample, everything editable:
                         A structure picture, name and sequence (text)
                         B HPLC trace (native chart); without an hplc_file, a zoom on the
                           product's isotope cluster, each peak labelled with its m/z
@@ -70,7 +73,7 @@ OUTPUT  (MS_report/ inside the data folder)
                           is not found; spectrum_rt in samples.csv moves it (native chart)
                       Right-click a chart > Edit Data to change it; all axes/colours editable.
                       Labels are data labels: click one to move, edit or delete it.
-  summary.csv         one line per sample: found or not, retention time, ppm error
+  summary.csv         one line per sample: found or not, retention time, ppm error, purity
   data/<id>_*.csv     the numbers behind every panel (paste into Prism if you like);
                       _tic.csv also has the XIC of the expected ions, _blank_tic.csv the blank
   data/<id>_main_peaks.csv  the biggest LC peaks: neutral mass, difference from the
@@ -88,13 +91,28 @@ samples.csv COLUMNS
                 side-chain tag in square brackets after its residue K[Biotin];
                 ends of a linear peptide with dashes: Ac-QHREDGSGSGK[TAMRA]-NH2
                 (a linear peptide with no ends written is H-...-OH)
-  topology      linear | head-to-tail   (required)
-  raw_file      the .raw (or .mzML) file for this sample
+                or three-letter codes with dashes: H-Ala-Gly-Lys(Biotin)-NH2,
+                cyclo(-Ala-Gly-Pro-); D residues as D-Phe need their own row
+  topology      linear | head-to-tail   (required; the backbone)
+  bridges       optional side-chain bridges, by residue position, separated by ", "
+                  C11-C18 (or 11-18)   disulfide between two Cys (-2H)
+                  K3-D7                lactam between Lys and Asp/Glu (-H2O)
+                  4-8                  hydrocarbon staple between two olefin residues such as
+                                       (S5) or (R8), closed by metathesis (-C2H4)
+                  disulfide            short for the only two Cys of the peptide
+                The kind follows from the two residues. Works with either topology.
+                e.g. thanatin: GSKKPVPIIYCNRRTGKCQRM, linear, C11-C18
+  raw_file     the .raw (or .mzML) file for this sample
   blank_file    the blank (solvent) run for this sample, any .raw in the folder. Its TIC is
                 drawn in grey behind panel E, it is subtracted from the spectrum in panel D,
                 and main peaks also in the blank are marked. Empty = no blank.
                 auto = the first row with role blank (what an older sheet without this column gets)
-  hplc_file     optional: a 2-column text/csv export (time, absorbance)
+  hplc_file     optional: a 2-column text/csv export (time, absorbance). Panel B then shows
+                the trace and the purity: area of the product peak as a percentage of all
+                integrated peaks (baseline in grey, product peak in red; the peak list is in
+                data/<id>_hplc_peaks.csv). Area % at the recorded wavelength, nothing more.
+  purity_rt     optional: retention time (min) of the product peak in the HPLC trace.
+                Empty = the peak with the largest area.
   spectrum_rt   optional: retention time (min) for the red line in panel E and the spectrum in
                 panel D. Empty = at the expected product if found, else at the TIC maximum (grey).
   role          sample | blank     (blank rows get no slide; pick them in blank_file)
@@ -106,7 +124,7 @@ samples.csv COLUMNS
                   auto     everything below that fits the sequence (default)
                   all      every delta, whatever the sequence (more chance hits)
                   none     only the expected peptide
-                  linear, deletions, insertions, dimer, adducts, side_reactions,
+                  linear, unbridged, deletions, insertions, dimer, adducts, side_reactions,
                   protecting_groups, or your own group from building_blocks.csv
                   +Na, +Pbf, ...  one delta by its code
                 (python3 make_ms_report.py deltas lists them all)
@@ -125,17 +143,50 @@ BUILDING BLOCKS (building_blocks.csv)
   D-amino acids: add rows, e.g. code dF with the D smiles, and write (dF).
 
 REQUIREMENTS
-  conda env 'msreport' (rdkit pyteomics psims python-pptx numpy openpyxl);
-  the script switches to it by itself. ThermoRawFileParser in
-  ~/software/ThermoRawFileParser (only needed for .raw files).
+  Python with rdkit pyteomics psims python-pptx numpy openpyxl. If they are missing, the
+  script switches by itself to a conda env called 'msreport' (or to MS_REPORT_PYTHON).
+  ThermoRawFileParser in ~/software/ThermoRawFileParser (only needed for .raw files;
+  THERMORAWFILEPARSER=/path/to/it points somewhere else).
+  --ppm: 5 suits Orbitrap and FT-ICR data, about 20 a Q-TOF. Spectra must be centroided.
 """
 
 import os
 import sys
 from pathlib import Path
 
-MASTER_DIR = Path(os.environ.get("MS_REPORT_HOME") or Path.home() / "Downloads" / "MSdata" / "Script")
-ENV_PYTHON = Path("/opt/anaconda3/envs/msreport/bin/python")
+VERSION = "1.1.0"
+REPO = "Caroldorium/MS-report"       # where new versions and the issue tracker live
+
+
+def _master_dir():
+    """Where the shared building_blocks.csv and the app's settings live: MS_REPORT_HOME if set,
+    else this script's folder when it holds a building_blocks.csv, else Documents/MS Report
+    (the app's folder) when it exists, else this script's folder."""
+    if os.environ.get("MS_REPORT_HOME"):
+        return Path(os.environ["MS_REPORT_HOME"]).expanduser()
+    here = Path(__file__).resolve().parent
+    app_home = Path.home() / "Documents" / "MS Report"
+    if (here / "building_blocks.csv").exists() or not app_home.is_dir():
+        return here
+    return app_home
+
+
+def _env_python():
+    """A conda environment called 'msreport', wherever conda is installed (or MS_REPORT_PYTHON)."""
+    if os.environ.get("MS_REPORT_PYTHON"):
+        return Path(os.environ["MS_REPORT_PYTHON"]).expanduser()
+    roots = [Path.home() / n for n in ("miniconda3", "anaconda3", "miniforge3", "mambaforge", "micromamba")]
+    roots += [Path("/opt/anaconda3"), Path("/opt/miniconda3"), Path("/opt/homebrew/Caskroom/miniconda/base"),
+              Path("/opt/homebrew/Caskroom/miniforge/base")]
+    for r in roots:
+        p = r / "envs" / "msreport" / "bin" / "python"
+        if p.exists():
+            return p
+    return Path("/nonexistent")
+
+
+MASTER_DIR = _master_dir()
+ENV_PYTHON = _env_python()
 CONVERTER_CANDIDATES = [
     Path.home() / "software" / "ThermoRawFileParser" / "ThermoRawFileParser",
 ]
@@ -190,8 +241,9 @@ MONO = {
     "Se": 79.9165213, "Si": 27.9769265325, "B": 11.0093054, "Li": 7.01600455,
 }
 
-OPTIONAL_COLUMNS = ["observed_mz", "find_deltas", "blank_file", "spectrum_rt"]
-SAMPLE_COLUMNS = ["id", "name", "sequence", "topology", "raw_file", "blank_file", "spectrum_rt", "hplc_file",
+OPTIONAL_COLUMNS = ["observed_mz", "find_deltas", "blank_file", "spectrum_rt", "bridges", "purity_rt"]
+SAMPLE_COLUMNS = ["id", "name", "sequence", "topology", "bridges", "raw_file", "blank_file", "spectrum_rt", "hplc_file",
+                  "purity_rt",
                   "role", "find_deltas", "observed_mz", "notes"]
 TOPOLOGIES = ("linear", "head-to-tail")
 
@@ -216,6 +268,21 @@ F,Phe,Phenylalanine,residue,C9H9NO,[*:1]N[C@@H](Cc1ccccc1)C(=O)[*:2],,,
 R,Arg,Arginine,residue,C6H12N4O,[*:1]N[C@@H](CCCNC(=N)N)C(=O)[*:2],,,
 Y,Tyr,Tyrosine,residue,C9H9NO2,[*:1]N[C@@H](Cc1ccc(O)cc1)C(=O)[*:2],,,
 W,Trp,Tryptophan,residue,C11H10N2O,[*:1]N[C@@H](Cc1c[nH]c2ccccc12)C(=O)[*:2],,,
+Aib,Aib,2-Aminoisobutyric acid,residue,C4H7NO,[*:1]NC(C)(C)C(=O)[*:2],,,
+Mox,Mox,Methoxinine (O-methylhomoserine),residue,C5H9NO2,[*:1]N[C@@H](CCOC)C(=O)[*:2],,,
+Nle,Nle,Norleucine,residue,C6H11NO,[*:1]N[C@@H](CCCC)C(=O)[*:2],,,
+Nva,Nva,Norvaline,residue,C5H9NO,[*:1]N[C@@H](CCC)C(=O)[*:2],,,
+Abu,Abu,2-Aminobutyric acid,residue,C4H7NO,[*:1]N[C@@H](CC)C(=O)[*:2],,,
+Orn,Orn,Ornithine,residue,C5H10N2O,[*:1]N[C@@H](CCCN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Dab,Dab,"2,4-Diaminobutyric acid",residue,C4H8N2O,[*:1]N[C@@H](CCN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Dap,Dap,"2,3-Diaminopropionic acid",residue,C3H6N2O,[*:1]N[C@@H](CN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+Cit,Cit,Citrulline,residue,C6H11N3O2,[*:1]N[C@@H](CCCNC(N)=O)C(=O)[*:2],,,
+Hyp,Hyp,4-Hydroxyproline,residue,C5H7NO2,[*:1]N1C[C@H](O)C[C@H]1C(=O)[*:2],,,
+Sar,Sar,Sarcosine (N-methylglycine),residue,C3H5NO,[*:1]N(C)CC(=O)[*:2],,,
+S5,S5,(S)-2-(4-Pentenyl)alanine (stapling),residue,C8H13NO,[*:1]N[C@@](C)(CCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+R5,R5,(R)-2-(4-Pentenyl)alanine (stapling),residue,C8H13NO,[*:1]N[C@](C)(CCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+S8,S8,(S)-2-(7-Octenyl)alanine (stapling),residue,C11H19NO,[*:1]N[C@@](C)(CCCCCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
+R8,R8,(R)-2-(7-Octenyl)alanine (stapling),residue,C11H19NO,[*:1]N[C@](C)(CCCCCCC=C)C(=O)[*:2],,,olefin for a hydrocarbon staple
 H-,,Free amine (N-terminus),n_cap,H,[H][*:1],,,default N-terminus of a linear peptide
 Ac-,,Acetyl (N-terminus),n_cap,C2H3O,CC(=O)[*:1],,,
 -OH,,Free acid (C-terminus),c_cap,HO,O[*:2],,,default C-terminus of a linear peptide
@@ -436,16 +503,220 @@ class Peptide:
     n_cap: str = None
     c_cap: str = None
     formula: Counter = field(default_factory=Counter)
+    bridges: list = field(default_factory=list)   # [(i, j, "disulfide" | "lactam")], 0-based residue indices
 
     @property
     def mass(self):
         return formula_mass(self.formula)
 
+    @property
+    def ringed(self):
+        return self.topology == "head-to-tail" or bool(self.bridges)
 
-def parse_sequence(seq, topology, blocks):
-    seq = re.sub(r"\s+", "", seq or "")
+
+SIDE_ACID = "[CX3](=O)[OX2H1]"
+SIDE_OLEFIN = "[CX3;H1;!R]=[CX3;H2]"                    # terminal vinyl, e.g. on S5 / R8
+BRIDGE_LOSS = {"disulfide": "H2", "lactam": "H2O", "staple": "C2H4"}       # what closing the bridge removes
+BRIDGE_OPEN = {"disulfide": "reduced", "lactam": "open lactam", "staple": "unstapled"}
+
+
+def side_groups(block):
+    """What a residue's side chain can bridge with: thiol / amine (at its [*:3]) and acid (a free COOH)."""
+    mol = Chem.MolFromSmiles(block.smiles)
+    out = set()
+    for a in mol.GetAtoms():
+        if a.GetAtomicNum() == 0 and a.GetAtomMapNum() == 3:
+            sym = a.GetNeighbors()[0].GetSymbol()
+            if sym in ("S", "Se"):
+                out.add("thiol")
+            elif sym == "N":
+                out.add("amine")
+    if mol.HasSubstructMatch(Chem.MolFromSmarts(SIDE_ACID)):
+        out.add("acid")
+    if mol.HasSubstructMatch(Chem.MolFromSmarts(SIDE_OLEFIN)):
+        out.add("olefin")
+    return out
+
+
+def parse_bridges(text, units, blocks):
+    """'C11-C18' / '11-18, 2-9' / 'disulfide' -> [(i, j, kind)]; the kind follows from the two residues."""
+    toks = split_list(text)
+    if not toks:
+        return []
+    groups = [side_groups(blocks[u.code]) for u in units]
+
+    def name(i):
+        c = units[i].code
+        return (c if len(c) == 1 else f"({c})") + str(i + 1)
+    pairs = []
+    for tok in toks:
+        if tok.lower() in ("disulfide", "disulphide", "ss", "s-s"):
+            thiols = [i for i, g in enumerate(groups) if "thiol" in g and not units[i].tag]
+            if len(thiols) != 2:
+                raise UserError(f"bridges: 'disulfide' alone needs exactly two free Cys (this peptide has "
+                                f"{len(thiols)}); write the positions, e.g. C2-C9, C5-C14")
+            pairs.append((thiols[0], thiols[1], tok))
+            continue
+        m = re.fullmatch(r"(\(?[A-Za-z0-9]*?\)?)(\d+)\s*[-–:]\s*(\(?[A-Za-z0-9]*?\)?)(\d+)", tok)
+        if not m:
+            raise UserError(f"bridges: cannot read '{tok}'. Write two residue positions, e.g. C11-C18 or 11-18")
+        ends = []
+        for letters, num in ((m.group(1), m.group(2)), (m.group(3), m.group(4))):
+            i = int(num) - 1
+            if not 0 <= i < len(units):
+                raise UserError(f"bridges: position {num} in '{tok}' is outside the peptide ({len(units)} residues)")
+            b = blocks[units[i].code]
+            want = letters.strip("()")
+            if want and want not in (b.code, b.code3, (b.code3 or "").lower()):
+                raise UserError(f"bridges: '{tok}' says {want}{num}, but residue {num} is {b.code3 or b.code}")
+            ends.append(i)
+        if ends[0] == ends[1]:
+            raise UserError(f"bridges: '{tok}' joins a residue to itself")
+        pairs.append((min(ends), max(ends), tok))
+    out, used = [], {}
+    for i, j, tok in pairs:
+        for k in (i, j):
+            if k in used:
+                raise UserError(f"bridges: residue {name(k)} is in two bridges ({used[k]} and {tok})")
+            if units[k].tag:
+                raise UserError(f"bridges: residue {name(k)} carries the tag [{units[k].tag}], so it cannot bridge")
+            used[k] = tok
+        gi, gj = groups[i], groups[j]
+        if "thiol" in gi and "thiol" in gj:
+            kind = "disulfide"
+        elif ("amine" in gi and "acid" in gj) or ("acid" in gi and "amine" in gj):
+            kind = "lactam"
+        elif "olefin" in gi and "olefin" in gj:
+            kind = "staple"
+        else:
+            raise UserError(f"bridges: no bridge known between {name(i)} and {name(j)} (disulfide = two Cys; "
+                            f"lactam = Lys with Asp or Glu; staple = two olefin residues such as S5, R8)")
+        out.append((i, j, kind))
+    return sorted(out)
+
+
+def bridge_text(p):
+    """'disulfide C11-C18, lactam K3-D7' for titles and tables."""
+    def name(i):
+        c = p.units[i].code
+        return (c if len(c) == 1 else f"({c})") + str(i + 1)
+    return ", ".join(f"{kind} {name(i)}-{name(j)}" for i, j, kind in p.bridges)
+
+
+def open_forms(pep):
+    """Precursors with a ring not closed: [(name, formula to add)]."""
+    out = []
+    if pep.topology == "head-to-tail":
+        out.append(("linear (+H2O)", parse_formula("H2O")))
+    for kind in ("disulfide", "lactam", "staple"):
+        n = sum(1 for b in pep.bridges if b[2] == kind)
+        for k in range(1, n + 1):
+            add = add_formula(Counter(), parse_formula(BRIDGE_LOSS[kind]), k)
+            unit = {"lactam": "H2O", "staple": "C2H4"}.get(kind)
+            what = f"+{2 * k}H" if kind == "disulfide" else (f"+{unit}" if k == 1 else f"+{k}{unit}")
+            count = "" if n == 1 else (f"{k} of {n} " if k < n else "all ")
+            out.append((f"{count}{BRIDGE_OPEN[kind]} ({what})", add))
+    return out
+
+
+CYCLO_RE = re.compile(r"^(?:cyclo|cyc|c)[(\[]-?(.*?)-?[)\]]$", re.I)
+
+
+def split_dashes(text):
+    """Split at dashes that are not inside brackets: 'Lys(5-FAM)-Gly' -> ['Lys(5-FAM)', 'Gly']."""
+    out, depth, cur = [], 0, ""
+    for ch in text:
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        if ch == "-" and depth <= 0:
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    return out + [cur]
+
+
+def three_to_one(seq, blocks):
+    """'H-Ala-Gly-Lys(Biotin)-NH2' -> 'H-AGK[Biotin]-NH2'. None when the text is not three-letter.
+    Three-letter means: dash-separated, and at least one part is a three-letter code as written in
+    building_blocks.csv (Ala or ala; ALA stays one-letter Ala-Leu-Ala)."""
+    look = residue_lookup(blocks)
+    three = {b.code3 for b in blocks.values() if b.kind == "residue" and b.code3}
+    three |= {c.lower() for c in three}
+    toks = split_dashes(seq)
+    base = lambda t: re.split(r"[(\[]", t, maxsplit=1)[0]
+    if len(toks) < 2 or not any(base(t) in three for t in toks):
+        return None
+    n_caps = {b.code[:-1]: b.code for b in blocks.values() if b.kind == "n_cap"}
+    c_caps = {b.code[1:]: b.code for b in blocks.values() if b.kind == "c_cap"}
+    n_cap = c_cap = ""
+    if toks[0] in n_caps and not (toks[0] in look and len(toks) > 1 and base(toks[1]) not in look
+                                  and toks[1] not in ("D", "L")):
+        n_cap, toks = n_caps[toks[0]], toks[1:]
+    if toks and toks[-1] in c_caps:
+        c_cap, toks = c_caps[toks[-1]], toks[:-1]
+    body, i = "", 0
+    while i < len(toks):
+        t = toks[i]
+        i += 1
+        if t == "":
+            raise UserError("two dashes in a row in the sequence")
+        if t in ("D", "L") and i < len(toks):          # D-Phe is written with a dash of its own
+            nxt, name = toks[i], base(toks[i])
+            if t == "L":
+                continue
+            found = next((k for k in (f"D-{name}", f"D{name}", f"d{name}",
+                                      "d" + look[name].code if name in look else None) if k and k in look), None)
+            if found is None:
+                raise UserError(f"D-{name} is not in building_blocks.csv (add a residue row, e.g. code "
+                                f"d{look[name].code if name in look else name} with the D smiles)")
+            t = found + nxt[len(name):]
+            i += 1
+        name = base(t)
+        rest = t[len(name):]
+        if name not in look:
+            if i == 1 and not n_cap:
+                raise UserError(f"unknown N-terminal group or residue '{name}' (N-terminal groups: "
+                                f"{', '.join(n_caps.values())}; add a row to building_blocks.csv)")
+            if i == len(toks) and not c_cap:
+                raise UserError(f"unknown C-terminal group or residue '{name}' (C-terminal groups: "
+                                f"{', '.join(c_caps.values())}; add a row to building_blocks.csv)")
+            raise UserError(f"unknown residue '{name}' (add a row to building_blocks.csv)")
+        code = look[name].code
+        body += code if len(code) == 1 else f"({code})"
+        if rest:
+            if not re.fullmatch(r"\(.+\)|\[.+\]", rest):
+                raise UserError(f"cannot read '{t}'; a side-chain tag is written Lys(Biotin)")
+            body += f"[{rest[1:-1]}]"
+    return n_cap + body + c_cap
+
+
+def read_sequence(seq, blocks):
+    """Whatever the user wrote -> (one-letter text, True when written as cyclo(...))."""
+    seq = re.sub(r"\s+", "", seq or "").replace("\u2013", "-").replace("\u2212", "-")
+    m = CYCLO_RE.match(seq)
+    if m:
+        seq = m.group(1)
+    one = three_to_one(seq, blocks)
+    return (seq if one is None else one), bool(m)
+
+
+def guess_topology(seq, blocks=None):
+    """For a row whose topology is not set yet."""
+    s = re.sub(r"\s+", "", seq or "")
+    if CYCLO_RE.match(s):
+        return "head-to-tail"
+    return "linear" if "-" in s else "head-to-tail"
+
+
+def parse_sequence(seq, topology, blocks, bridges=""):
+    seq, cyclo = read_sequence(seq, blocks)
     if not seq:
         raise UserError("empty sequence")
+    if cyclo and topology == "linear":
+        raise UserError("the sequence is written as cyclo(...), so the topology is head-to-tail")
     if topology not in TOPOLOGIES:
         raise UserError(f"topology must be one of {', '.join(TOPOLOGIES)} (got '{topology}')")
     look = residue_lookup(blocks)
@@ -509,22 +780,27 @@ def parse_sequence(seq, topology, blocks):
     if topology == "linear":
         fc.update(blocks[n_cap].formula)
         fc.update(blocks[c_cap].formula)
-    return Peptide(units, topology, n_cap, c_cap, Counter({e: n for e, n in fc.items() if n}))
+    links = parse_bridges(bridges, units, blocks)
+    for _, _, kind in links:
+        fc = add_formula(fc, parse_formula(BRIDGE_LOSS[kind]), -1)
+    return Peptide(units, topology, n_cap, c_cap, Counter({e: n for e, n in fc.items() if n}), links)
 
 
 def one_letter(p):
     body = "".join((u.code if len(u.code) == 1 else f"({u.code})") + (f"[{u.tag}]" if u.tag else "")
                    for u in p.units)
+    tail = f" ({bridge_text(p)})" if p.bridges else ""
     if p.topology == "head-to-tail":
-        return f"cyclo({body})"
-    return f"{p.n_cap}{body}{p.c_cap}"
+        return f"cyclo({body}){tail}"
+    return f"{p.n_cap}{body}{p.c_cap}{tail}"
 
 
 def three_letter(p, blocks):
     parts = [(blocks[u.code].code3 or u.code) + (f"({u.tag})" if u.tag else "") for u in p.units]
+    tail = f" ({bridge_text(p)})" if p.bridges else ""
     if p.topology == "head-to-tail":
-        return "cyclo(-" + "-".join(parts) + "-)"
-    return p.n_cap + "-".join(parts) + p.c_cap
+        return "cyclo(-" + "-".join(parts) + "-)" + tail
+    return p.n_cap + "-".join(parts) + p.c_cap + tail
 
 
 # ----------------------------------------------------------------------------
@@ -588,8 +864,8 @@ class Species:
         return formula_mass(self.formula)
 
 
-BUILTIN_DELTA_GROUPS = ("linear", "deletions", "insertions", "dimer")
-AUTO_GROUPS = ("linear", "adducts", "side_reactions", "protecting_groups", "deletions", "insertions", "dimer")
+BUILTIN_DELTA_GROUPS = ("linear", "unbridged", "deletions", "insertions", "dimer")
+AUTO_GROUPS = ("linear", "unbridged", "adducts", "side_reactions", "protecting_groups", "deletions", "insertions", "dimer")
 
 
 def split_list(text):
@@ -620,9 +896,10 @@ def expand_deltas(text, pep, blocks):
         return (b.code, add_formula(pep.formula, b.formula), None)
 
     def add_group(g, use_residues=True):
-        if g == "linear":
-            if pep.topology == "head-to-tail":
-                out.append(("linear (+H2O)", add_formula(pep.formula, parse_formula("H2O")), None))
+        if g in ("linear", "unbridged"):
+            for name, add in open_forms(pep):
+                if name.startswith("linear") == (g == "linear"):
+                    out.append((name, add_formula(pep.formula, add), None))
         elif g in ("deletions", "insertions"):
             for code in dict.fromkeys(u.code for u in pep.units):
                 if g == "deletions" and len(pep.units) <= 2:
@@ -720,11 +997,46 @@ def build_molecule(pep, blocks):
         return m.GetMol()
 
     cyc = pep.topology == "head-to-tail"
+    link, acid_end, olefin_end = {}, set(), set()   # residue index -> label shared by the two ends of its bridge
+    for k, (i, j, kind) in enumerate(pep.bridges):
+        link[i] = link[j] = 2000 + k
+        if kind == "staple":
+            olefin_end.update((i, j))
+        if kind == "lactam":
+            acid_end.add(i if "acid" in side_groups(blocks[pep.units[i].code]) and
+                         "amine" in side_groups(blocks[pep.units[j].code]) else j)
+
+    def acid_as_attachment(smi):
+        """The side-chain COOH loses its OH: C(=O)O -> C(=O)[*:3]."""
+        m = Chem.RWMol(Chem.MolFromSmiles(smi))
+        for a in m.GetAtoms():                      # an unused [*:3] elsewhere becomes H
+            if a.GetAtomicNum() == 0 and a.GetAtomMapNum() == 3:
+                a.SetAtomMapNum(9)
+        o = m.GetAtomWithIdx(m.GetSubstructMatch(Chem.MolFromSmarts(SIDE_ACID))[2])
+        o.SetAtomicNum(0)
+        o.SetAtomMapNum(3)
+        return Chem.MolToSmiles(m)
+
+    def olefin_as_attachment(smi):
+        """Metathesis: the terminal =CH2 leaves (as ethylene with its partner): C=C -> C=[*:3]."""
+        m = Chem.RWMol(Chem.MolFromSmiles(smi))
+        for a in m.GetAtoms():
+            if a.GetAtomicNum() == 0 and a.GetAtomMapNum() == 3:
+                a.SetAtomMapNum(9)
+        c = m.GetAtomWithIdx(m.GetSubstructMatch(Chem.MolFromSmarts(SIDE_OLEFIN))[1])
+        c.SetAtomicNum(0)
+        c.SetAtomMapNum(3)
+        c.SetNoImplicit(True)
+        c.SetNumExplicitHs(0)
+        return Chem.MolToSmiles(m)
+
     for i, u in enumerate(pep.units):
         mp = {1: (100 + i - 1) if i > 0 else (100 + n - 1 if cyc else 1),
               2: (100 + i) if (i < n - 1 or cyc) else 2,
-              3: (1000 + i) if u.tag else None}
-        frags.append(relabel(blocks[u.code].smiles, mp))
+              3: (1000 + i) if u.tag else link.get(i)}
+        smi = acid_as_attachment(blocks[u.code].smiles) if i in acid_end else \
+            olefin_as_attachment(blocks[u.code].smiles) if i in olefin_end else blocks[u.code].smiles
+        frags.append(relabel(smi, mp))
         if u.tag:
             frags.append(relabel(blocks[u.tag].smiles, {1: 1000 + i}, is_tag=True))
     if not cyc:
@@ -980,7 +1292,11 @@ def peak_window(rt, y, k=None, frac=0.5, max_half_width=0.3):
     return a, b, k
 
 
-def averaged_spectrum(run, a, b, merge_ppm=5.0):
+TOL = {"merge": 5.0}     # peaks closer than this (ppm) are one peak; cmd_run widens it with --ppm
+
+
+def averaged_spectrum(run, a, b, merge_ppm=None):
+    merge_ppm = merge_ppm or TOL["merge"]
     s, e = run.offsets[a], run.offsets[b + 1]
     m, i = run.mz[s:e], run.inten[s:e]
     if len(m) == 0:
@@ -1071,9 +1387,9 @@ def explain_mass(M, pep, blocks, others, tol_ppm=10.0, max_out=3):
     """Possible explanations of a measured neutral mass M for this peptide (fewest steps first)."""
     tol = max(M * tol_ppm * 1e-6, 0.003)
     refs = [("expected", pep.mass)]
-    if pep.topology == "head-to-tail":
-        refs.append(("linear", pep.mass + formula_mass(parse_formula("H2O"))))
-    terms = [(b.code, b.mass) for b in blocks.values() if b.kind == "shift"]
+    for oname, add in open_forms(pep):
+        refs.append((oname.split(" (")[0], pep.mass + formula_mass(add)))
+    terms =[(b.code, b.mass) for b in blocks.values() if b.kind == "shift"]
     terms += [(f"{b.code} (as [M+{hill(b.formula)}]+)", b.mass - MONO["H"])
               for b in blocks.values() if b.kind == "adduct"]
     seen = set()
@@ -1106,8 +1422,9 @@ def explain_mass(M, pep, blocks, others, tol_ppm=10.0, max_out=3):
     return [t[2] for t in out[:max_out]]
 
 
-def blank_level(blank_run, mz, ppm=5.0):
+def blank_level(blank_run, mz, ppm=None):
     """Highest intensity of this m/z in any blank scan."""
+    ppm = ppm or TOL["merge"]
     if blank_run is None:
         return 0.0
     best = 0.0
@@ -1272,10 +1589,12 @@ def sequences_from_csv(path, blocks):
             for j, c in enumerate(cells):
                 if j == obs_col:
                     continue
-                if len(c) < 3 or not re.fullmatch(r"[A-Za-z()\[\]0-9+\-]+", c) or not re.search(r"[A-Z]{2}", c):
+                if len(c) < 3 or not re.fullmatch(r"[A-Za-z()\[\]0-9+\-]+", c):
                     continue
                 try:
-                    parse_sequence(c, "linear" if "-" in c else "head-to-tail", blocks)
+                    if not re.search(r"[A-Z]{2}", c) and three_to_one(CYCLO_RE.sub(r"\1", c), blocks) is None:
+                        continue
+                    parse_sequence(c, guess_topology(c), blocks)
                 except UserError:
                     continue
                 others = [x for k, x in enumerate(cells) if k not in (j, obs_col) and x]
@@ -1406,7 +1725,7 @@ def prepare_samples(folder, blocks, only=None):
             problems.append(f"{where}: no sequence")
             continue
         try:
-            pep = parse_sequence(r["sequence"], r["topology"], blocks)
+            pep = parse_sequence(r["sequence"], r["topology"], blocks, r.get("bridges", ""))
         except UserError as e:
             problems.append(f"{where}: {e}")
             continue
@@ -1424,6 +1743,7 @@ def prepare_samples(folder, blocks, only=None):
         try:
             parse_observed(r["observed_mz"])
             parse_rt(r.get("spectrum_rt", ""))
+            parse_purity_rt(r.get("purity_rt", ""))
         except UserError as e:
             problems.append(f"{where}: {e}")
         samples.append((r, pep))
@@ -1458,11 +1778,11 @@ def cmd_check(folder, blocks, max_z):
                       f"{best[2].mz:.4f}, {best[0]:+.0f} ppm)")
 
 
-def cmd_mass(seq, topology, blocks, max_z):
+def cmd_mass(seq, topology, blocks, max_z, bridges=""):
     if not topology:
-        topology = "linear" if "-" in seq else "head-to-tail"
+        topology = "linear" if bridges and not CYCLO_RE.match(seq.strip()) else guess_topology(seq)
         print(f"(topology not given; using {topology})")
-    pep = parse_sequence(seq, topology, blocks)
+    pep = parse_sequence(seq, topology, blocks, bridges)
     print(one_letter(pep))
     print(three_letter(pep, blocks))
     print(f"Formula {hill(pep.formula)}   M (mono) = {pep.mass:.4f}")
@@ -1477,6 +1797,7 @@ def cmd_deltas(blocks, path):
     print("  all         = every delta below, whatever the sequence (more chance hits)")
     print("  none        = only the expected peptide")
     print("  linear      = uncyclised precursor of a head-to-tail peptide (+H2O)")
+    print("  unbridged   = a bridge not formed: reduced disulfide (+2H), open lactam (+H2O), unstapled (+C2H4)")
     print("  deletions   = each residue of the sequence missing once")
     print("  insertions  = each residue of the sequence present twice")
     print("  dimer       = 2M (odd charge states, the even ones overlap the monomer)")
@@ -1530,10 +1851,28 @@ def write_csv(path, header, rows):
         w.writerows(rows)
 
 
+def isotope_of_main(smz, sint, ion, height, main, pattern, ppm):
+    """True when this ion sits on an isotope peak of the expected product and is no taller than that
+    peak should be. A reduced disulfide (+2H, 2.0157) is 9 mDa from the product's own M+2 (2.0067):
+    without this check the oxidised peptide would always 'contain' its reduced form."""
+    for m_ion in main.all_ions:
+        if m_ion.z != ion.z:
+            continue
+        for n in range(1, len(pattern)):
+            target = m_ion.mz + n * C13_SHIFT / ion.z
+            if abs(ion.mz - target) / target * 1e6 > 2 * ppm:
+                continue
+            lo, hi = np.searchsorted(smz, [m_ion.mz * (1 - ppm * 1e-6), m_ion.mz * (1 + ppm * 1e-6)])
+            if hi > lo and pattern[0] > 0:
+                return height <= 2.0 * float(sint[lo:hi].max()) * pattern[n] / pattern[0]
+    return False
+
+
 def analyse(r, pep, blocks, run, ppm, max_z, min_rel=1.0, min_scans=8):
     species = make_species(pep, r["find_deltas"], blocks, (run.scan_lo, run.scan_hi), max_z)
     res = {"species": [], "window": None, "found": False}
     all_xic = xic_many(run, species, ppm)
+    main_pattern = iso_pattern(pep.formula)
     for sp, y in zip(species, all_xic):
         k = supported_apex(y, min_scans)
         w = peak_window(run.rt, y, k) if k is not None else None
@@ -1543,7 +1882,9 @@ def analyse(r, pep, blocks, run, ppm, max_z, min_rel=1.0, min_scans=8):
             floor = min_rel / 100 * (sint.max() if len(sint) else 0)
             for ion in sp.ions:
                 j = match_in_spectrum(smz, sint, ion, ppm)
-                if j is not None and sint[j] >= floor:
+                if j is not None and sint[j] >= floor and not (
+                        sp is not species[0] and not sp.carrier
+                        and isotope_of_main(smz, sint, ion, float(sint[j]), species[0], main_pattern, ppm)):
                     hits[ion.label] = (float(smz[j]), float(sint[j]))
             if hits:
                 charges = {i.z for i in sp.ions if i.label in hits}
@@ -1603,7 +1944,117 @@ def read_hplc(path):
                 ys.append(nums[1])
     if len(xs) < 5:
         raise UserError(f"could not read time/absorbance columns from {path.name}")
-    return np.array(xs), np.array(ys)
+    xs, ys = np.array(xs), np.array(ys)
+    o = np.argsort(xs, kind="stable")
+    return xs[o], ys[o]
+
+
+def parse_purity_rt(text):
+    text = (text or "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        raise UserError(f"purity_rt: '{text}' is not a retention time in minutes")
+
+
+# ----------------------------------------------------------------------------
+# HPLC purity (area %)
+# ----------------------------------------------------------------------------
+def hplc_baseline(y, lam=None, p=0.002, rounds=12):
+    """Asymmetric least-squares baseline (Eilers): a smooth curve that hugs the trace from below,
+    so a drifting gradient baseline is not counted as peak area."""
+    n = len(y)
+    lam = lam if lam is not None else 1e-5 * n ** 4 / 600.0     # same stiffness per run, whatever the sampling
+    d = np.diff(np.eye(n), 2, axis=0)
+    pen = lam * d.T @ d
+    w = np.ones(n)
+    z = y
+    for _ in range(rounds):
+        z = np.linalg.solve(np.diag(w) + pen, w * y)
+        w = np.where(y > z, p, 1 - p)
+    return z
+
+
+def trapezoid(y, x):
+    return float(np.sum((y[1:] + y[:-1]) * np.diff(x)) / 2)
+
+
+def hplc_peaks(t, y, skip_before=None):
+    """Integrate an HPLC trace. Returns (peaks, baseline on t); each peak is a dict with
+    rt, start, end, area, height, pct (of the summed peak area).
+
+    Baseline: asymmetric least squares on the trace resampled to 600 points. A peak is a stretch
+    above 3x the noise (and above 0.5 % of the tallest peak); stretches are cut at valleys between
+    two tops (perpendicular drop). Peaks before skip_before min (default 1 min for runs over 5 min:
+    the injection front) are left out, and so is anything under 0.1 % of the total area."""
+    t, y = np.asarray(t, float), np.asarray(y, float)
+    o = np.argsort(t)
+    t, y = t[o], y[o]
+    grid = np.linspace(t[0], t[-1], 600)
+    base = np.interp(t, grid, hplc_baseline(np.interp(grid, t, y)))
+    sig = y - base
+    k = max(1, int(round(len(t) / 2000)))                 # light smoothing against detector noise
+    sm = np.convolve(sig, np.ones(2 * k + 1) / (2 * k + 1), mode="same")
+    resid = sig - sm if k > 1 else np.diff(sig, prepend=sig[0]) / np.sqrt(2)
+    noise = 1.4826 * float(np.median(np.abs(resid - np.median(resid)))) or 1e-12
+    thr = max(3 * noise, 0.005 * float(sm.max()))
+    if skip_before is None:
+        skip_before = 1.0 if t[-1] - t[0] > 5 else 0.0
+    above = sm > thr
+    peaks, i, n = [], 0, len(t)
+    while i < n:
+        if not above[i]:
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and above[j + 1]:
+            j += 1
+        # tops inside this stretch: local maxima that stand out from the valley next to them
+        seg = sm[i:j + 1]
+        tops = [a for a in range(1, len(seg) - 1) if seg[a] >= seg[a - 1] and seg[a] > seg[a + 1]] or [int(np.argmax(seg))]
+        kept = []
+        for a in tops:
+            if not kept:
+                kept.append(a)
+                continue
+            valley = float(seg[kept[-1]:a + 1].min())
+            if min(seg[kept[-1]], seg[a]) - valley > max(3 * noise, 0.02 * min(seg[kept[-1]], seg[a])):
+                kept.append(a)
+            elif seg[a] > seg[kept[-1]]:
+                kept[-1] = a
+        cuts = [0] + [kept[q] + int(np.argmin(seg[kept[q]:kept[q + 1] + 1])) for q in range(len(kept) - 1)] + [len(seg) - 1]
+        for q, a in enumerate(kept):
+            lo, hi = i + cuts[q], i + cuts[q + 1]
+            if hi > lo:
+                peaks.append(dict(rt=float(t[i + a]), start=float(t[lo]), end=float(t[hi]), lo=lo, hi=hi,
+                                  area=trapezoid(np.clip(sig[lo:hi + 1], 0, None), t[lo:hi + 1]),
+                                  height=float(sm[i + a])))
+        i = j + 1
+    peaks = [pk for pk in peaks if pk["rt"] >= t[0] + skip_before]
+    total = sum(pk["area"] for pk in peaks)
+    peaks = [pk for pk in peaks if total and pk["area"] >= 0.001 * total]
+    total = sum(pk["area"] for pk in peaks)
+    for pk in peaks:
+        pk["pct"] = 100 * pk["area"] / total if total else 0.0
+    return peaks, base
+
+
+def hplc_purity(t, y, product_rt=None):
+    """(peaks, baseline, index of the product peak or None). The product peak is the one at
+    product_rt (within its own width, else the nearest within 0.3 min); without product_rt, the
+    one with the largest area."""
+    peaks, base = hplc_peaks(t, y)
+    if not peaks:
+        return peaks, base, None
+    if product_rt is None:
+        return peaks, base, int(np.argmax([pk["area"] for pk in peaks]))
+    inside = [k for k, pk in enumerate(peaks) if pk["start"] <= product_rt <= pk["end"]]
+    if inside:
+        return peaks, base, min(inside, key=lambda k: abs(peaks[k]["rt"] - product_rt))
+    k = int(np.argmin([abs(pk["rt"] - product_rt) for pk in peaks]))
+    return peaks, base, (k if abs(peaks[k]["rt"] - product_rt) <= 0.3 else None)
 
 
 # Slide layout in inches (x, y, w, h); slide is 13.33 x 12 in. Nothing here overlaps.
@@ -1912,6 +2363,68 @@ class Deck:
                   size=8, color="000000")
 
     # --- one slide
+    def add_overview(self, summary, title):
+        """Table of every sample on the first slide(s): found or not, retention time, ppm, purity."""
+        from pptx.util import Inches, Pt
+        from pptx.dml.color import RGBColor
+        from pptx.enum.text import PP_ALIGN
+        if not summary:
+            return
+        with_purity = any(x.get("purity_pct") for x in summary)
+        header = ["ID", "Name", "Sequence", "M (mono)", "Found", "RT (min)", "Error (ppm)"] + \
+                 (["Purity (%)"] if with_purity else []) + ["Also found"]
+        widths = [0.7, 2.3, 3.6, 1.0, 0.7, 0.8, 0.9] + ([0.85] if with_purity else []) + [0.0]
+        widths[-1] = 12.7 - sum(widths)
+        word = {"yes": "yes", "weak": "weak", "no": "no"}
+        colour = {"yes": "1A7F37", "weak": "8A5A00", "no": "B42318"}
+        per, row_h = 34, 0.3
+        chunks = [summary[i:i + per] for i in range(0, len(summary), per)]
+        for n, chunk in enumerate(chunks):
+            s = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+            found = sum(1 for x in summary if x["found"] == "yes")
+            weak = sum(1 for x in summary if x["found"] == "weak")
+            self.text(s, *L["title"], title + (f" ({n + 1}/{len(chunks)})" if len(chunks) > 1 else ""),
+                      size=24, bold=True, color="002A5C")
+            self.text(s, 0.45, 0.66, 12.4, 0.3,
+                      f"{len(summary)} samples: expected mass found in {found}"
+                      + (f", weak evidence in {weak}" if weak else "") + ". One slide per sample follows.",
+                      size=11, color="1F2933")
+            shape = s.shapes.add_table(len(chunk) + 1, len(header), Inches(0.3), Inches(1.15), Inches(12.7),
+                                       Inches(row_h * (len(chunk) + 1)))
+            shape._element.graphic.graphicData.tbl.tblPr.find(
+                "{http://schemas.openxmlformats.org/drawingml/2006/main}tableStyleId").text = \
+                "{5940675A-B579-460E-94D1-54222C63F5DA}"
+            tbl = shape.table
+            for ci, wd in enumerate(widths):
+                tbl.columns[ci].width = Inches(wd)
+            body = []
+            for x in chunk:
+                also = x.get("deltas_found", "")
+                also = re.sub(r" \([^)]*min[^)]*\)", "", also)
+                row = [x["id"], x["name"], x["sequence"], x["mono_mass"], word.get(x["found"], x["found"]),
+                       x["rt_min"], x["mean_ppm"]] + ([x.get("purity_pct", "")] if with_purity else []) + [also]
+                body.append(row)
+            for ri, vals in enumerate([header] + body):
+                for ci, v in enumerate(vals):
+                    c = tbl.cell(ri, ci)
+                    c.margin_top = c.margin_bottom = Inches(0.02)
+                    limit = int(widths[ci] * 17)
+                    v = str(v)
+                    c.text = v if len(v) <= limit else v[:limit - 1].rstrip() + "\u2026"
+                    for p in c.text_frame.paragraphs:
+                        p.alignment = PP_ALIGN.LEFT if ci in (1, 2, len(header) - 1) else PP_ALIGN.CENTER
+                        for rn in p.runs:
+                            rn.font.size, rn.font.name, rn.font.bold = Pt(9), FONT, ri == 0
+                            if ri and ci == 4:
+                                rn.font.bold = True
+                                rn.font.color.rgb = RGBColor.from_string(colour.get(vals[4], "1F2933"))
+                tbl.rows[ri].height = Inches(row_h)
+        lst = self.prs.slides._sldIdLst            # the overview goes first
+        for n in range(len(chunks)):
+            el = lst[len(lst) - len(chunks) + n]
+            lst.remove(el)
+            lst.insert(n, el)
+
     def add_sample(self, r, pep, blocks, res, run, blank_run, data_dir, folder, ppm, blank_name=""):
         from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
@@ -1933,7 +2446,7 @@ class Deck:
         png, svg, mol = data_dir / f"{sid}_structure.png", data_dir / f"{sid}.svg", data_dir / f"{sid}.mol"
         try:
             m = build_molecule(pep, blocks)
-            aspect = draw_structure(m, png, svg, mol, cyclic=pep.topology == "head-to-tail")
+            aspect = draw_structure(m, png, svg, mol, cyclic=pep.ringed)
             bx, by, box_w, box_h = L["A_pic"]
             w = min(box_w, box_h * aspect)
             s.shapes.add_picture(str(png), Inches(bx + (box_w - w) / 2), Inches(by), Inches(w), Inches(w / aspect))
@@ -1947,11 +2460,33 @@ class Deck:
         if r["hplc_file"]:
             hx, hy = read_hplc(folder / r["hplc_file"])
             write_csv(data_dir / f"{sid}_hplc.csv", ["time_min", "absorbance"], zip(hx, hy))
-            hx, hy = downsample(hx, hy)
-            self.xy_chart(s, *L["B"], [("HPLC", hx, hy, "000000", 0.75)], "Time (min)",
-                          "Absorbance (mAU)", xlim=(float(hx.min()), float(hx.max())), ylim=None, x_fmt="0.0")
-            self.text(s, L["B"][0] + L["B"][2] - 3.0, L["B"][1] - 0.22, 3.0, 0.18, "Purity by Abs 214 nm: __ %",
+            series, caption = [], "Purity: not calculated"
+            try:      # purity = area of the product peak / area of all integrated peaks
+                peaks, base, k = hplc_purity(hx, hy, parse_purity_rt(r.get("purity_rt", "")))
+                write_csv(data_dir / f"{sid}_hplc_peaks.csv", ["rt_min", "start_min", "end_min", "area", "area_pct", "product"],
+                          [(f"{pk['rt']:.3f}", f"{pk['start']:.3f}", f"{pk['end']:.3f}", f"{pk['area']:.5g}",
+                            f"{pk['pct']:.2f}", "yes" if n == k else "") for n, pk in enumerate(peaks)])
+                bx = np.linspace(float(hx.min()), float(hx.max()), 200)
+                series.append(("baseline", bx, np.interp(bx, hx, base), "9AA0A6", 0.5))
+                res["hplc_base"] = base
+                if k is not None:
+                    pk = peaks[k]
+                    series.append(("product peak", *downsample(hx[pk["lo"]:pk["hi"] + 1], hy[pk["lo"]:pk["hi"] + 1], 400),
+                                   "C00000", 1.25))
+                    res["purity"] = dict(pct=pk["pct"], rt=pk["rt"], n=len(peaks))
+                    res["hplc_seg"] = (hx[pk["lo"]:pk["hi"] + 1], hy[pk["lo"]:pk["hi"] + 1])
+                    caption = (f"Purity {pk['pct']:.1f} % (area of the peak at {pk['rt']:.2f} min; "
+                               f"{len(peaks)} peak{'s' if len(peaks) != 1 else ''} integrated)")
+                else:
+                    caption = "Purity: no peak at purity_rt"
+            except Exception as e:      # an odd trace must never stop the report
+                caption = f"Purity: not calculated ({e})"
+            dx, dy = downsample(hx, hy)
+            self.xy_chart(s, *L["B"], [("HPLC", dx, dy, "000000", 0.75)] + series, "Time (min)",
+                          "Absorbance", xlim=(float(hx.min()), float(hx.max())), ylim=None, x_fmt="0.0")
+            self.text(s, L["B"][0] + L["B"][2] - 4.6, L["B"][1] - 0.22, 4.6, 0.18, caption,
                       size=9, color="5E6873", align=PP_ALIGN.RIGHT)
+            res["hplc"] = (hx, hy, res.get("hplc_base"), res.get("hplc_seg"), caption)
         else:
             self.isotope_zoom(s, pep, res, run, data_dir, sid, ppm)
 
@@ -2180,7 +2715,119 @@ class Deck:
         s.notes_slide.notes_text_frame.text = "\n".join(notes)
 
 
+# ----------------------------------------------------------------------------
+# PDF copy of the report (for lab notebooks)
+# ----------------------------------------------------------------------------
+def write_pdf(path, title, summary, pages):
+    """One overview page, then one page per sample: structure, m/z table, HPLC or the reason there
+    is none, spectrum and TIC. Drawn with matplotlib; returns False when it is not installed."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_pdf import PdfPages
+    except ImportError:
+        return False
+    plt.rcParams.update({"font.family": ["Arial", "Helvetica", "DejaVu Sans"], "font.size": 8,
+                         "axes.spines.top": False, "axes.spines.right": False, "pdf.fonttype": 42})
+    ink, grey, red = "#16191d", "#5f6b76", "#c00000"
+    colour = {"yes": "#1a7f37", "weak": "#8a5a00", "no": "#b42318"}
+    with PdfPages(path) as pdf:
+        per = 38
+        with_purity = any(x.get("purity_pct") for x in summary)
+        cols = ["ID", "Name", "Sequence", "M (mono)", "Found", "RT (min)", "ppm"] + (["Purity %"] if with_purity else [])
+        xs = [0.06, 0.12, 0.34, 0.66, 0.76, 0.83, 0.90] + ([0.95] if with_purity else [])
+        for n in range(0, max(1, len(summary)), per):
+            fig = plt.figure(figsize=(8.27, 11.69))
+            fig.text(0.06, 0.95, title, fontsize=15, weight="bold", color="#002a5c")
+            found = sum(1 for x in summary if x["found"] == "yes")
+            fig.text(0.06, 0.93, f"{len(summary)} samples: expected mass found in {found}. "
+                                 f"Made {datetime.now():%Y-%m-%d %H:%M} with MS Report {VERSION}.", color=grey)
+            y = 0.90
+            for cx, c in zip(xs, cols):
+                fig.text(cx, y, c, weight="bold", color=grey)
+            for x in summary[n:n + per]:
+                y -= 0.0215
+                vals = [x["id"], x["name"][:30], x["sequence"][:44] + ("\u2026" if len(x["sequence"]) > 44 else ""),
+                        x["mono_mass"], x["found"], x["rt_min"], x["mean_ppm"]] + ([x.get("purity_pct", "")] if with_purity else [])
+                for k, (cx, v) in enumerate(zip(xs, vals)):
+                    fig.text(cx, y, str(v), color=colour.get(x["found"], ink) if k == 4 else ink,
+                             weight="bold" if k == 4 else "normal", family="monospace" if k == 2 else None,
+                             fontsize=7 if k == 2 else 8)
+            pdf.savefig(fig)
+            plt.close(fig)
+        for pg in pages:
+            fig = plt.figure(figsize=(8.27, 11.69))
+            fig.text(0.06, 0.955, pg["title"], fontsize=14, weight="bold", color="#002a5c")
+            fig.text(0.06, 0.938, pg["seq"][:150], fontsize=7 if len(pg["seq"]) > 90 else 8, family="monospace")
+            fig.text(0.06, 0.924, pg["formula"], color=grey)
+            fig.text(0.94, 0.955, {"yes": "found", "weak": "weak evidence", "no": "not found"}[pg["found"]],
+                     ha="right", fontsize=11, weight="bold", color=colour[pg["found"]])
+            ax = fig.add_axes([0.06, 0.725, 0.42, 0.19])          # structure
+            ax.axis("off")
+            if pg.get("png") and Path(pg["png"]).exists():
+                ax.imshow(plt.imread(pg["png"]))
+            ax = fig.add_axes([0.54, 0.725, 0.40, 0.185])         # HPLC, when there is one
+            if pg.get("hplc"):
+                hx, hy, base, seg, caption = pg["hplc"]
+                ax.plot(hx, hy, color=ink, lw=0.6)
+                if base is not None:
+                    ax.plot(hx, base, color="#9aa0a6", lw=0.5)
+                if seg is not None:
+                    ax.plot(seg[0], seg[1], color=red, lw=1.0)
+                ax.set_xlabel("Time (min)")
+                ax.set_ylabel("Absorbance")
+                ax.set_title(caption, fontsize=7.5, color=grey, loc="right")
+            else:
+                ax.axis("off")
+            y = 0.675
+            fig.text(0.06, y, "Ion", weight="bold", color=grey)
+            fig.text(0.20, y, "Calculated m/z", weight="bold", color=grey)
+            fig.text(0.36, y, "Observed m/z", weight="bold", color=grey)
+            fig.text(0.52, y, "Error (ppm)", weight="bold", color=grey)
+            fig.text(0.66, y, "RT (min)", weight="bold", color=grey)
+            for row in pg["table"][:8]:
+                y -= 0.0165
+                for cx, v in zip((0.06, 0.20, 0.36, 0.52, 0.66), row):
+                    fig.text(cx, y, v)
+            ax = fig.add_axes([0.08, 0.30, 0.86, 0.22])           # spectrum
+            smz, sint = pg["smz"], pg["sint"]
+            if len(smz):
+                top = float(sint.max())
+                keep = np.argsort(sint)[-4000:]
+                ax.vlines(smz[keep], 0, sint[keep] / top * 100, color=ink, lw=0.5)
+                for mz, inten, tag in pg["labels"]:
+                    ax.vlines([mz], 0, [inten / top * 100], color=red, lw=0.8)
+                    ax.text(mz, inten / top * 100 + 2, f"{tag}\n{mz:.4f}", color=red, ha="center", va="bottom", fontsize=6.5)
+                ax.set_xlim(pg["mz_range"])
+            ax.set_ylim(0, 125)
+            ax.set_xlabel("m/z")
+            ax.set_ylabel("Relative abundance")
+            ax.set_title(pg["spec_title"], fontsize=7.5, color=grey, loc="left")
+            ax = fig.add_axes([0.08, 0.05, 0.86, 0.19])           # TIC
+            rt, tic = pg["rt"], pg["tic"]
+            top = float(tic.max()) or 1.0
+            if pg.get("blank") is not None:
+                ax.plot(pg["blank"][0], pg["blank"][1] / top * 100, color="#9aa0a6", lw=0.6)
+            ax.plot(rt, tic / top * 100, color=ink, lw=0.6)
+            if pg.get("line_rt") is not None:
+                ax.axvline(pg["line_rt"], color=red if pg["found"] != "no" else "#9aa0a6", lw=0.8)
+                ax.text(pg["line_rt"], 106, f" {pg['line_rt']:.2f}", ha="left", fontsize=7,
+                        color=red if pg["found"] != "no" else grey)
+            ax.set_xlim(float(rt[0]), float(rt[-1]))
+            ax.set_ylim(0, 115)
+            ax.set_xlabel("Time (min)")
+            ax.set_ylabel("Relative abundance")
+            ax.set_title("TIC" + (", blank in grey" if pg.get("blank") is not None else ""), fontsize=7.5, color=grey, loc="left")
+            if pg.get("note"):
+                fig.text(0.06, 0.012, pg["note"][:170], fontsize=6.5, color=grey)
+            pdf.savefig(fig)
+            plt.close(fig)
+    return True
+
+
 def cmd_run(folder, blocks, blocks_path, ppm, max_z, only, min_rel, min_scans):
+    TOL["merge"] = max(5.0, ppm)
     samples, blanks = prepare_samples(folder, blocks, only)
     out = folder / OUT_DIR_NAME
     data_dir, cache = out / "data", out / "cache"
@@ -2197,12 +2844,12 @@ def cmd_run(folder, blocks, blocks_path, ppm, max_z, only, min_rel, min_scans):
             blank_runs[name] = load_run(folder / name, cache)
         return name, blank_runs[name]
     deck = Deck()
-    summary = []
+    summary, pages = [], []
     others = []   # every peptide of this run, to spot carry-over or swapped vials
     for r_, p_ in samples:
         others.append((r_["id"], "", p_.mass))
-        if p_.topology == "head-to-tail":
-            others.append((r_["id"], "linear", p_.mass + formula_mass(parse_formula("H2O"))))
+        for oname, add in open_forms(p_):
+            others.append((r_["id"], oname.split(" (")[0], p_.mass + formula_mass(add)))
     for r, pep in samples:
         print(f"[{r['id']}] {r['name']}")
         run = load_run(folder / r["raw_file"], cache)
@@ -2239,6 +2886,23 @@ def cmd_run(folder, blocks, blocks_path, ppm, max_z, only, min_rel, min_scans):
                     mean_ppm=f"{np.mean(errs):.1f}" if errs else "",
                     intensity=f"{max(h[1] for h in main['hits'].values()):.2e}" if main["hits"] else "",
                     blank=blank_name)
+        pur = res.get("purity")
+        line["purity_pct"] = f"{pur['pct']:.1f}" if pur else ""
+        line["purity_rt"] = f"{pur['rt']:.2f}" if pur else ""
+        a_, b_, k_ = res["window"]
+        table = [("M", f"{pep.mass:.4f}", "", "", "")]
+        for ion in main["sp"].ions:
+            h = main["hits"].get(ion.label)
+            table.append((f"[{ion.label}]", f"{ion.mz:.4f}", f"{h[0]:.4f}" if h else "n.d.",
+                          f"{(h[0] - ion.mz) / ion.mz * 1e6:+.1f}" if h else "", line["rt_min"] if h else ""))
+        pages.append(dict(
+            title=r["name"] or f"Sample {r['id']}", seq=one_letter(pep), found=res["status"],
+            formula=f"{hill(pep.formula)}    Exact mass (mono.): {pep.mass:.4f}    {len(pep.units)} residues",
+            png=data_dir / f"{sid_}_structure.png", hplc=res.get("hplc"), table=table,
+            smz=res["smz"], sint=res["sint"], labels=res["labels"], mz_range=(run.scan_lo, run.scan_hi),
+            spec_title=f"{Path(r['raw_file']).stem}, spectrum averaged {run.rt[a_]:.2f}-{run.rt[b_]:.2f} min",
+            rt=run.rt, tic=run.tic, blank=(blank_run.rt, blank_run.tic) if blank_run is not None else None,
+            line_rt=float(run.rt[k_]), note=res.get("note", "")))
         def hit_text(sx):
             return f"{sx['sp'].name} ({run.rt[sx['window'][2]]:.2f} min, {max(h[1] for h in sx['hits'].values()):.1e})"
         line["deltas_searched"] = len(res["species"]) - 1
@@ -2269,6 +2933,7 @@ def cmd_run(folder, blocks, blocks_path, ppm, max_z, only, min_rel, min_scans):
             c = comps[0]
             print(f"    biggest peak: {c['rt']:.2f} min, M={c['M']:.3f} (z={c['z']}, {c['M'] - pep.mass:+.3f} vs expected): "
                   f"{', '.join(c['explain']) or 'unexplained'}{' [also in blank]' if c['blank'] else ''}")
+    deck.add_overview(summary, f"{folder.name}: overview")
     pptx_path = out / "MS_report.pptx"
     if (out / "~$MS_report.pptx").exists():   # open in PowerPoint: never write under it
         pptx_path = out / f"MS_report_{datetime.now():%Y%m%d-%H%M%S}.pptx"
@@ -2283,9 +2948,19 @@ def cmd_run(folder, blocks, blocks_path, ppm, max_z, only, min_rel, min_scans):
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         w.writerows(summary)
+    pdf_path = out / "MS_report_notebook.pdf"     # not MS_report.pdf: that is what PowerPoint calls its own export
+    try:
+        made = write_pdf(pdf_path, f"{folder.name}: overview", summary, pages)
+    except PermissionError:
+        pdf_path = out / f"MS_report_notebook_{datetime.now():%Y%m%d-%H%M%S}.pdf"
+        made = write_pdf(pdf_path, f"{folder.name}: overview", summary, pages)
+    except Exception as e:          # the PDF is a copy; never lose the report over it
+        made = False
+        print(f"PDF not written: {e}")
     shutil.copy(folder / "samples.csv", out / "samples_used.csv")
     shutil.copy(blocks_path, out / "building_blocks_used.csv")
     print(f"\nDone: {pptx_path}\n      {out / 'summary.csv'}")
+    print(f"      {pdf_path}" if made else "      (no PDF: matplotlib is not installed)")
     print(f"      {sum(1 for x in summary if x['found'] == 'yes')}/{len(summary)} samples: expected mass found"
           f" ({sum(1 for x in summary if x['found'] == 'weak')} more weak)")
     if len(summary) > 1:
@@ -2308,6 +2983,7 @@ def main():
     ap.add_argument("--min-rel", type=float, default=1.0)
     ap.add_argument("--min-scans", type=int, default=8)
     ap.add_argument("--topology", choices=TOPOLOGIES)
+    ap.add_argument("--bridges")
     try:
         args = ap.parse_args()
     except SystemExit:
@@ -2331,7 +3007,7 @@ def main():
         elif cmd == "mass":
             if not args.sequence:
                 raise UserError('give a sequence, e.g.  python3 make_ms_report.py mass "Ac-KGG-NH2"')
-            cmd_mass(args.sequence, args.topology, blocks, args.max_charge)
+            cmd_mass(args.sequence, args.topology, blocks, args.max_charge, args.bridges or "")
         elif cmd == "blocks":
             cmd_blocks(blocks, blocks_path)
         elif cmd == "deltas":
