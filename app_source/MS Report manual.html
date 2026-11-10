@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MS Report Manual</title>
+<style>
+  :root { --ink: #1F2933; --muted: #5E6873; --rule: #D9DDE1; --accent: #002A5C; --bg: #FFFFFF; --soft: #F4F6F8; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 Arial, Helvetica, sans-serif; margin: 0; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 72px; }
+  h1 { color: var(--accent); font-size: 28px; margin: 0 0 4px; }
+  .lede { color: var(--muted); margin: 0 0 20px; }
+  nav { background: var(--soft); padding: 10px 16px; border-radius: 4px; font-size: 14px; }
+  nav a { color: var(--accent); margin-right: 14px; white-space: nowrap; }
+  h2 { color: var(--accent); font-size: 20px; margin: 40px 0 8px; padding-top: 16px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  ol, ul { padding-left: 22px; } li { margin: 5px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 6px; font-size: 14px; }
+  th, td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  code { font: 13px Menlo, Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 3px; }
+  pre { font: 13px Menlo, Consolas, monospace; background: var(--soft); padding: 10px 12px; overflow-x: auto; }
+  .note { background: var(--soft); border-left: 3px solid var(--accent); padding: 10px 14px; margin: 14px 0; }
+  .wide { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>MS Report Manual</h1>
+<p class="lede">Turns a folder of LC-MS .raw files into editable PowerPoint slides (structure, HPLC, calculated vs observed m/z, MS spectrum, TIC), one slide per peptide, and looks for what else is in each sample.</p>
+<nav>
+  <a href="#start">Quick start</a><a href="#samples">samples.csv</a><a href="#sequence">Sequences</a>
+  <a href="#deltas">find_deltas</a><a href="#blocks">building_blocks.csv</a><a href="#report">Reading the report</a>
+  <a href="#terminal">Terminal use</a><a href="#trouble">Troubleshooting</a>
+</nav>
+
+<h2 id="start">1. Quick start</h2>
+<h3>Install the app (once)</h3>
+<ol>
+  <li>Unzip <b>MS Report for Mac.zip</b> and drag <b>MS Report</b> into Applications.</li>
+  <li>Double-click it. If macOS says it cannot verify the app, click <b>Done</b>, open <b>System Settings &rsaquo; Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</li>
+  <li>Click <b>Install</b> and wait 2-5 minutes (internet and about 600 MB of disk space; no administrator password).</li>
+  <li>If macOS asks whether MS Report may use your Downloads, Documents or Desktop folder, click <b>Allow</b>.</li>
+</ol>
+<h3>Each experiment</h3>
+<ol>
+  <li>Put the <b>.raw</b> files, a water/blank run (name containing <code>H2O</code> or <code>blank</code>) and the peptide list in one folder.
+      The list is either the batch synthesis Excel sheet (3-letter codes, one per cell, numbered rows) or a .csv with one-letter sequences.</li>
+  <li>Open MS Report and click <b>Choose folder</b> (or a recent folder).</li>
+  <li>For a new folder, click <b>Read sequences and match raw files</b>. The <b>Samples</b> tab then lists every peptide.</li>
+  <li>Check the table: <b>Topology</b> for every row, the <b>Raw file</b> and the <b>Blank</b>. Rows with a problem have a red edge and say what is wrong; <b>Needs fixing</b> shows only those. Click <b>Save</b>.</li>
+  <li>In the <b>Run</b> tab click <b>Make report</b>. When it is ready, click <b>Open slides</b>, or look through the <b>Results</b> tab.</li>
+</ol>
+<div class="note">Everything is written to <b>MS_report</b> inside the data folder. The table is the file <code>samples.csv</code> in the data folder; <b>Open in Excel</b> opens it there, and the window reloads it when you come back.</div>
+<h3>Working with many samples</h3>
+<ul>
+  <li><b>Change many rows at once:</b> tick the rows (shift-click ticks a range, the box in the header ticks every row shown), then use the blue bar: Topology, Blank, Role, Find deltas, or Delete rows.</li>
+  <li><b>Paste a column from Excel:</b> copy the cells, click the first cell to fill (e.g. Sequence of row 1) and paste. The lines fill the rows below; rows are added if needed. Tab-separated columns fill the next columns.</li>
+  <li><b>Move around:</b> arrow up/down or Return go to the same column in the next row; <b>&#8984;S</b> saves.</li>
+  <li><b>Filter:</b> the search box matches id, name, sequence and file; the chips show only rows that need fixing, rows without a raw file, or blanks.</li>
+  <li><b>Run only some samples:</b> tick them in Samples, then choose <i>Only the rows selected</i> in Run. That report then has only those slides.</li>
+  <li>Under each sequence: residues, formula, monoisotopic mass, the first ions ([M+2H]<sup>2+</sup>, ...) and how many deltas will be searched, updated as you type.</li>
+</ul>
+
+<h2 id="samples">2. samples.csv, column by column</h2>
+<div class="wide"><table>
+  <tr><th>Column</th><th>What it does</th><th>Example</th></tr>
+  <tr><td>id</td><td>Short unique label, used in file names.</td><td><code>7</code></td></tr>
+  <tr><td>name</td><td>Slide title.</td><td><code>De novo canonical 7</code></td></tr>
+  <tr><td>sequence</td><td>The peptide (section 3).</td><td><code>Ac-QHREDGK[Biotin]-NH2</code></td></tr>
+  <tr><td>topology</td><td><b>Required.</b> <code>linear</code> or <code>head-to-tail</code>.</td><td><code>head-to-tail</code></td></tr>
+  <tr><td>raw_file</td><td>The .raw (or .mzML) file. Rows without one are skipped.</td><td><code>De_novo_canonical_7.raw</code></td></tr>
+  <tr><td>blank_file</td><td>The blank (solvent) run for this sample; any .raw in the folder, so different samples can have different blanks. Its TIC is drawn in grey behind panel E on the sample's scale, its spectrum over the same time window is subtracted from panel D, and main peaks also present in the blank are marked. Empty = no blank. Setup fills in the blank it recognises (<code>auto</code> = the first row with role blank).</td><td><code>H2O.raw</code></td></tr>
+  <tr><td>spectrum_rt</td><td>Optional: retention time in minutes for the line in panel E and the spectrum in panel D. Empty = at the expected product when it is found; otherwise at the largest TIC peak (grey line). In the window: the <b>Line at</b> column, or <b>use</b> next to a peak in Results.</td><td><code>4.93</code></td></tr>
+  <tr><td>hplc_file</td><td>Optional HPLC export: two columns, time and absorbance (.csv/.txt). Without one, panel B shows a zoom on the product's isotope peaks instead.</td><td><code>pep7_214nm.csv</code></td></tr>
+  <tr><td>role</td><td><code>sample</code>, or <code>blank</code> for a solvent run (no slide; pick it as blank_file).</td><td><code>sample</code></td></tr>
+  <tr><td>find_deltas</td><td>What else to look for (section 4). Setup writes <code>auto</code>.</td><td><code>auto</code></td></tr>
+  <tr><td>observed_mz</td><td>Optional m/z values you read yourself, separated by <code>;</code>. Each goes to the nearest calculated ion (within 20 ppm) and is shown in table C instead of the script's value.</td><td><code>839.4310; 559.9561</code></td></tr>
+  <tr><td>notes</td><td>Free text, copied into the slide notes.</td><td></td></tr>
+</table></div>
+
+<h2 id="sequence">3. Writing sequences</h2>
+<table>
+  <tr><th>Rule</th><th>Example</th></tr>
+  <tr><td>One capital letter per canonical residue</td><td><code>RMNEILDFIDPRFISNDP</code></td></tr>
+  <tr><td>Other residues: their code in round brackets</td><td><code>GS(Aib)GQ</code></td></tr>
+  <tr><td>A tag on a side chain: square brackets right after the residue</td><td><code>K[Biotin]</code>, <code>K[TAMRA]</code></td></tr>
+  <tr><td>Ends of a linear peptide, with dashes (default <code>H-</code> and <code>-OH</code>)</td><td><code>Ac-QHREDGSGSGK-NH2</code></td></tr>
+  <tr><td>A head-to-tail peptide has no ends written</td><td><code>LGFDFKNRPDMSRI</code></td></tr>
+</table>
+<p>Lower-case letters are not defined. For D-amino acids, add rows such as <code>dF</code> to building_blocks.csv and write <code>(dF)</code>.</p>
+
+<h2 id="deltas">4. find_deltas: what else to look for</h2>
+<p>Besides the expected peptide, the report searches each sample for related species: impurities, adducts and leftovers. Write one or more of the words below, separated by a comma and a space.</p>
+<table>
+  <tr><th>Write</th><th>Searches for</th></tr>
+  <tr><td><code>auto</code> (default)</td><td>linear, adducts, side_reactions, protecting_groups, deletions, insertions and dimer, keeping only the deltas that fit the residues of this peptide (e.g. Pbf only if it has an Arg).</td></tr>
+  <tr><td><code>all</code></td><td>Every delta in building_blocks.csv, whatever the sequence. Most thorough, most chance hits.</td></tr>
+  <tr><td><code>none</code></td><td>Only the expected peptide.</td></tr>
+  <tr><td><code>linear</code></td><td>The uncyclised precursor of a head-to-tail peptide (+H<sub>2</sub>O).</td></tr>
+  <tr><td><code>deletions</code></td><td>Each residue of the sequence missing once (incomplete coupling).</td></tr>
+  <tr><td><code>insertions</code></td><td>Each residue present twice (double coupling).</td></tr>
+  <tr><td><code>dimer</code></td><td>2M (odd charge states only; even ones sit on top of the monomer).</td></tr>
+  <tr><td><code>adducts</code></td><td>Na<sup>+</sup>, K<sup>+</sup>, NH<sub>4</sub><sup>+</sup>.</td></tr>
+  <tr><td><code>side_reactions</code></td><td>Oxidation, deamidation, water/ammonia loss, aspartimide-piperidide, formyl, methyl/ethyl ester, Tfa, TMG cap from HBTU/HATU, sulfonation, EDT and HMP adducts, ...</td></tr>
+  <tr><td><code>protecting_groups</code></td><td>tBu, Boc, Trt, Pbf, Pmc, Mtt, Mmt, Fmoc, Acm, StBu, Bzl, Alloc, ivDde, Dmb, Hmb left on.</td></tr>
+  <tr><td>a code, e.g. <code>+Pbf</code>, <code>+Na</code></td><td>Just that one delta.</td></tr>
+  <tr><td>a group you made</td><td>Every row of building_blocks.csv with that group (section 5).</td></tr>
+</table>
+<p>Examples: <code>auto</code> &middot; <code>linear, adducts</code> &middot; <code>deletions, +Pbf, +tBu</code> &middot; <code>all</code>. To see every delta with its exact mass, run <code>python3 make_ms_report.py deltas</code> in Terminal.</p>
+<div class="note"><b>Chance hits.</b> The more deltas you search, the more will match something by chance. Each run is therefore also searched with another peptide's sequence, and the report prints both counts, e.g. "12 delta hits with the right sequences, 7 with another peptide's sequence".
+Treat delta hits as leads to check, not proof. Only confident hits ("yes") go on the slide; weak ones are listed in <code>data/&lt;id&gt;_mz_table.csv</code>.</div>
+<p>The deltas come from the Novabiochem peptide delta-mass sheet, written as exact formulas.</p>
+
+<h2 id="blocks">5. building_blocks.csv: adding monomers, tags and deltas</h2>
+<p>All masses come from this file. The app keeps it in <code>Documents/MS Report/building_blocks.csv</code>; a copy in the data folder takes priority for that folder only.
+Every time it starts, the script checks that each row's structure and formula agree, and refuses rows that don't.</p>
+<div class="wide"><table>
+  <tr><th>Column</th><th>Meaning</th></tr>
+  <tr><td>code</td><td>What you write in a sequence or in find_deltas. One letter for canonical residues; anything else for the rest (<code>Aib</code>, <code>Biotin</code>, <code>+Pbf</code>).</td></tr>
+  <tr><td>code3</td><td>3-letter code, used to read Excel sheets and for the 3-letter sequence on the slide.</td></tr>
+  <tr><td>name</td><td>Description.</td></tr>
+  <tr><td>kind</td><td><code>residue</code>, <code>n_cap</code>, <code>c_cap</code>, <code>tag</code>, <code>adduct</code> (a charge carrier like Na) or <code>shift</code> (a mass change).</td></tr>
+  <tr><td>formula</td><td>What the unit adds to the peptide. Residue = amino acid minus H<sub>2</sub>O (<code>C3H5NO</code> for Ala). Tag = group added minus the H it replaces. Shift = net change, which may be a loss (<code>-H2O</code>) or a gain minus a loss (<code>C5H9N-O</code>).</td></tr>
+  <tr><td>smiles</td><td>Structure with attachment points: <code>[*:1]</code> N side, <code>[*:2]</code> C side, <code>[*:3]</code> side chain (for tags). Required for residues, caps and tags; not used for deltas.</td></tr>
+  <tr><td>group</td><td>Deltas only: which find_deltas group the row belongs to. Use one of the existing groups or invent one (lower case, e.g. <code>my_linkers</code>), then write that name in find_deltas.</td></tr>
+  <tr><td>residues</td><td>Deltas only: one-letter codes the delta can happen on (e.g. <code>R</code> for Pbf). <code>auto</code> skips the row when the peptide has none of them. Blank means it applies to any peptide.</td></tr>
+  <tr><td>notes</td><td>Free text.</td></tr>
+</table></div>
+<h3>Examples of new rows</h3>
+<pre>code,code3,name,kind,formula,smiles,group,residues,notes
+Aib,Aib,2-Aminoisobutyric acid,residue,C4H7NO,[*:1]NC(C)(C)C(=O)[*:2],,,
+dF,DPhe,D-Phenylalanine,residue,C9H9NO,[*:1]N[C@H](Cc1ccccc1)C(=O)[*:2],,,
+FAM,,5-Carboxyfluorescein (amide),tag,C21H10O6,[*:1]C(=O)c1ccc2c(c1)C(=O)OC21c2ccc(O)cc2Oc2cc(O)ccc21,,,
++Gly-ins,,Extra Gly from symmetric anhydride,shift,C2H3NO,,my_impurities,G,</pre>
+<p>In the window, the <b>Building blocks</b> tab edits this file: each row shows its mass and any problem as you type, and Save refuses a file with a wrong row. In Terminal, <code>python3 make_ms_report.py blocks</code> checks it.</p>
+
+<h2 id="report">6. Reading the report</h2>
+<table>
+  <tr><th>Panel</th><th>Shows</th></tr>
+  <tr><td>A</td><td>Structure, formula and exact mass. The drawing is a starting point; open <code>data/&lt;id&gt;.mol</code> in ChemDraw to tidy it.</td></tr>
+  <tr><td>B</td><td>HPLC trace. Without an HPLC file: a zoom on the product's strongest charge state, each isotope peak labelled with its measured m/z (monoisotopic in red). If the product is not found, the zoom shows where it would be; a nearby peak outside 5 ppm is labelled in orange with its error, because it is something else.</td></tr>
+  <tr><td>C</td><td>Calculated vs observed m/z, the error in ppm and the retention time, for the expected peptide and every confident delta hit. Side products often elute at another time than the product. <i>n.d.</i> = not detected.</td></tr>
+  <tr><td>D</td><td>MS spectrum averaged over the product's elution peak (minus the blank when there is one), full scan range. Red labels: expected ions and confident delta hits; green: other major peaks.</td></tr>
+  <tr><td>E</td><td>Total ion chromatogram, the blank in grey. Red line: where the product elutes (labelled <i>cyclic 4.53</i>). Grey line: the product was not found and D shows the largest TIC peak. Labelled <i>set by user</i> when spectrum_rt is filled.</td></tr>
+</table>
+<p>All charts are native PowerPoint charts: right-click &rsaquo; Edit Data, or click a label to move or delete it. Labels never overlap; a label that would not fit is left out (the slide says so for expected ions).</p>
+<h3>When is something "found"?</h3>
+<p>An ion counts when its monoisotopic peak, its first <sup>13</sup>C peak (at the ratio the formula predicts) and, for larger peptides, the second <sup>13</sup>C peak are within 5 ppm, in at least 8 consecutive scans, at 1% of the base peak or more.
+In summary.csv, <b>yes</b> means 2 or more charge states, or one at 5% of the base peak or more. <b>weak</b> means one charge state below 5%; unrelated peptides reach this level by chance, so it is not proof.</p>
+<h3>Output files (MS_report folder)</h3>
+<table>
+  <tr><td>MS_report.pptx</td><td>The slides; the notes under each slide list the details.</td></tr>
+  <tr><td>summary.csv</td><td>One line per sample: found or not, retention time, ppm, delta hits (with the chance level), main peaks.</td></tr>
+  <tr><td>data/&lt;id&gt;_mz_table.csv</td><td>Table C including weak hits.</td></tr>
+  <tr><td>data/&lt;id&gt;_main_peaks.csv</td><td>The biggest LC peaks: mass, difference from the expected mass, possible explanations, and whether it is also in the blank.</td></tr>
+  <tr><td>data/&lt;id&gt;_spectrum.csv, _tic.csv, _blank_tic.csv, _hplc.csv, _isotope_zoom.csv</td><td>The numbers behind each chart (ready for Prism). The spectrum file has the blank and the subtracted values; the zoom file has the calculated isotope pattern too.</td></tr>
+  <tr><td>data/&lt;id&gt;.mol / .svg / _structure.png</td><td>Structure for ChemDraw / as vector art / as a picture.</td></tr>
+</table>
+
+<h2 id="terminal">7. Terminal use (Carlos)</h2>
+<pre>cd "&lt;data folder&gt;"            # with make_ms_report.py copied into it
+python3 make_ms_report.py        # setup the first time, then the report
+python3 make_ms_report.py help   # full list of commands and options
+
+python3 ~/Downloads/MSdata/Script/dashboard.py --browser   # the MS Report window, in the web browser</pre>
+<table>
+  <tr><th>Command</th><th>Does</th></tr>
+  <tr><td><code>setup</code></td><td>Rewrite samples.csv from the .xlsx/.csv (the old one is kept as samples_old.csv).</td></tr>
+  <tr><td><code>check</code></td><td>Check samples.csv and print the calculated m/z; no MS data read.</td></tr>
+  <tr><td><code>run</code></td><td>Make the report. Options: <code>--only 1,5</code>, <code>--ppm 5</code>, <code>--max-charge 6</code>, <code>--min-rel 1</code>, <code>--min-scans 8</code>.</td></tr>
+  <tr><td><code>mass "SEQ"</code></td><td>Quick m/z calculator (<code>--topology head-to-tail</code>).</td></tr>
+  <tr><td><code>blocks</code> / <code>deltas</code></td><td>List the building blocks / what find_deltas can search for.</td></tr>
+</table>
+<p>The window and Terminal run the same script, so they give the same report. After changing <code>make_ms_report.py</code>, <code>dashboard.py</code>, <code>dashboard.html</code> or <code>building_blocks.csv</code> in the Script folder, rebuild the app and zip with <code>bash ~/Downloads/MSdata/Script/app_source/build_app.sh</code>.</p>
+
+<h2 id="trouble">8. Troubleshooting</h2>
+<table>
+  <tr><th>Message</th><th>What to do</th></tr>
+  <tr><td>topology must be one of linear, head-to-tail</td><td>Fill the topology column for that row.</td></tr>
+  <tr><td>unknown residue / unknown tag</td><td>Fix the sequence, or add the monomer (section 5).</td></tr>
+  <tr><td>find_deltas: '...' is not known</td><td>Use auto, all, none, a group name or a code; separate with a comma.</td></tr>
+  <tr><td>raw_file ... not found</td><td>The name in samples.csv does not match a file in the folder.</td></tr>
+  <tr><td>Problems in building_blocks.csv</td><td>The message names the line and the reason (e.g. structure and formula disagree).</td></tr>
+  <tr><td>No raw files (new folder)</td><td>Choose the folder that holds the .raw files.</td></tr>
+  <tr><td>samples.csv changed on disk</td><td>It was edited in Excel while the window had unsaved edits. Choose which version to keep.</td></tr>
+  <tr><td>The window does not open</td><td>Open MS Report again. If it still fails, send Carlos the file <code>Documents/MS Report/dashboard.log</code>.</td></tr>
+</table>
+</main>
+</body>
+</html>

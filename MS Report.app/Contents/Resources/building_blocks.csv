@@ -1,0 +1,63 @@
+code,code3,name,kind,formula,smiles,group,residues,notes
+G,Gly,Glycine,residue,C2H3NO,[*:1]NCC(=O)[*:2],,,
+A,Ala,Alanine,residue,C3H5NO,[*:1]N[C@@H](C)C(=O)[*:2],,,
+S,Ser,Serine,residue,C3H5NO2,[*:1]N[C@@H](CO)C(=O)[*:2],,,
+P,Pro,Proline,residue,C5H7NO,[*:1]N1CCC[C@H]1C(=O)[*:2],,,
+V,Val,Valine,residue,C5H9NO,[*:1]N[C@@H](C(C)C)C(=O)[*:2],,,
+T,Thr,Threonine,residue,C4H7NO2,[*:1]N[C@@H]([C@@H](C)O)C(=O)[*:2],,,
+C,Cys,Cysteine,residue,C3H5NOS,[*:1]N[C@@H](CS[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+L,Leu,Leucine,residue,C6H11NO,[*:1]N[C@@H](CC(C)C)C(=O)[*:2],,,
+I,Ile,Isoleucine,residue,C6H11NO,[*:1]N[C@@H]([C@@H](C)CC)C(=O)[*:2],,,
+N,Asn,Asparagine,residue,C4H6N2O2,[*:1]N[C@@H](CC(N)=O)C(=O)[*:2],,,
+D,Asp,Aspartic acid,residue,C4H5NO3,[*:1]N[C@@H](CC(=O)O)C(=O)[*:2],,,
+Q,Gln,Glutamine,residue,C5H8N2O2,[*:1]N[C@@H](CCC(N)=O)C(=O)[*:2],,,
+K,Lys,Lysine,residue,C6H12N2O,[*:1]N[C@@H](CCCCN[*:3])C(=O)[*:2],,,[*:3] = side-chain attachment for tags
+E,Glu,Glutamic acid,residue,C5H7NO3,[*:1]N[C@@H](CCC(=O)O)C(=O)[*:2],,,
+M,Met,Methionine,residue,C5H9NOS,[*:1]N[C@@H](CCSC)C(=O)[*:2],,,
+H,His,Histidine,residue,C6H7N3O,[*:1]N[C@@H](Cc1c[nH]cn1)C(=O)[*:2],,,
+F,Phe,Phenylalanine,residue,C9H9NO,[*:1]N[C@@H](Cc1ccccc1)C(=O)[*:2],,,
+R,Arg,Arginine,residue,C6H12N4O,[*:1]N[C@@H](CCCNC(=N)N)C(=O)[*:2],,,
+Y,Tyr,Tyrosine,residue,C9H9NO2,[*:1]N[C@@H](Cc1ccc(O)cc1)C(=O)[*:2],,,
+W,Trp,Tryptophan,residue,C11H10N2O,[*:1]N[C@@H](Cc1c[nH]c2ccccc12)C(=O)[*:2],,,
+H-,,Free amine (N-terminus),n_cap,H,[H][*:1],,,default N-terminus of a linear peptide
+Ac-,,Acetyl (N-terminus),n_cap,C2H3O,CC(=O)[*:1],,,
+-OH,,Free acid (C-terminus),c_cap,HO,O[*:2],,,default C-terminus of a linear peptide
+-NH2,,Amide (C-terminus),c_cap,H2N,N[*:2],,,
+Biotin,,Biotin (amide),tag,C10H14N2O2S,[*:1]C(=O)CCCC[C@@H]1SC[C@@H]2NC(=O)N[C@H]12,,,acylates the side-chain amine
+TAMRA,,5-Carboxytetramethylrhodamine (amide),tag,C25H20N2O4,[*:1]C(=O)c1ccc(-c2c3ccc(N(C)C)cc3oc3cc(=[N+](C)C)ccc23)c(C(=O)[O-])c1,,,5-isomer; zwitterion so M is neutral
++Na,,Sodium adduct,adduct,Na,,adducts,,[M+zH] becomes [M+(z-1)H+Na]
++K,,Potassium adduct,adduct,K,,adducts,,[M+zH] becomes [M+(z-1)H+K]
++CO2,,CO2 adduct (e.g. Trp carbamate),shift,CO2,,side_reactions,W,neutral mass shift
+-H2O,,Water loss,shift,-H2O,,side_reactions,,neutral mass shift
++O,,Oxidation (e.g. Met),shift,O,,side_reactions,MWC,neutral mass shift
++NH3,,Ammonium adduct ([M+NH4]+ vs [M+H]+),shift,NH3,,adducts,,Novabiochem delta mass sheet
+-NH3,,Pyroglutamate from N-terminal Gln; aspartimide from Asn,shift,-NH3,,side_reactions,QN,Novabiochem delta mass sheet
++deamid,,Deamidation of Asn/Gln; Cit from Arg,shift,O-HN,,side_reactions,NQR,Novabiochem delta mass sheet
++O2,,Oxidation of Met to sulfone,shift,O2,,side_reactions,M,Novabiochem delta mass sheet
++O3,,Cysteic acid from Cys,shift,O3,,side_reactions,C,Novabiochem delta mass sheet
++CH2,,Methyl ester,shift,CH2,,side_reactions,DE,Novabiochem delta mass sheet
++C2H4,,Ethyl,shift,C2H4,,side_reactions,DE,Novabiochem delta mass sheet
++CO,,Formyl,shift,CO,,side_reactions,KW,Novabiochem delta mass sheet
++Ac,,Acetyl (e.g. capping),shift,C2H2O,,side_reactions,,Novabiochem delta mass sheet
++Tfa,,Trifluoroacetyl,shift,C2F3O-H,,side_reactions,KSTY,Novabiochem delta mass sheet
++TMG,,Tetramethylguanidinium cap from HBTU/HATU,shift,C5H10N2,,side_reactions,,Novabiochem delta mass sheet
++pip,,Asp piperidide,shift,C5H9N-O,,side_reactions,D,Novabiochem delta mass sheet
++pipAla,,3-(1-Piperidinyl)alanine from C-terminal Cys,shift,C5H9N-S,,side_reactions,C,Novabiochem delta mass sheet
++tBu,,"tBu left on, or tBu alkylation",shift,C4H8,,protecting_groups,STDEYCMW,Novabiochem delta mass sheet
++Boc,,Boc left on,shift,C5H8O2,,protecting_groups,KWH,Novabiochem delta mass sheet
++Trt,,Trt left on,shift,C19H14,,protecting_groups,NQHC,Novabiochem delta mass sheet
++Pbf,,Pbf left on (Arg),shift,C13H16O3S,,protecting_groups,R,Novabiochem delta mass sheet
++Pmc,,Pmc left on (Arg),shift,C14H18O3S,,protecting_groups,R,Novabiochem delta mass sheet
++Mtt,,Mtt left on,shift,C20H16,,protecting_groups,K,Novabiochem delta mass sheet
++Mmt,,Mmt left on,shift,C20H16O,,protecting_groups,CK,Novabiochem delta mass sheet
++Fmoc,,Fmoc left on,shift,C15H10O2,,protecting_groups,,Novabiochem delta mass sheet
++Acm,,Acm left on (Cys),shift,C3H5NO,,protecting_groups,C,Novabiochem delta mass sheet
++StBu,,StBu left on (Cys),shift,C4H8S,,protecting_groups,C,Novabiochem delta mass sheet
++Bzl,,Benzyl,shift,C7H6,,protecting_groups,CWY,Novabiochem delta mass sheet
++Alloc,,Alloc left on,shift,C4H4O2,,protecting_groups,K,Novabiochem delta mass sheet
++ivDde,,ivDde left on,shift,C13H18O2,,protecting_groups,K,Novabiochem delta mass sheet
++Dmb,,Dmb left on,shift,C9H10O2,,protecting_groups,G,Novabiochem delta mass sheet
++Hmb,,Hmb left on,shift,C8H8O2,,protecting_groups,G,Novabiochem delta mass sheet
++SO3,,"Sulfonation from Pbf/Pmc (Arg, Ser, Thr)",shift,SO3,,side_reactions,RSTY,Novabiochem delta mass sheet
++EDT,,EDT disulfide adduct,shift,C2H4S2,,side_reactions,C,Novabiochem delta mass sheet
++HMP,,HMP linker adduct (Wang resin),shift,C7H6O,,side_reactions,,Novabiochem delta mass sheet

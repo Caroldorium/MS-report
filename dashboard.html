@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MS Report</title>
+<style>
+:root {
+  color-scheme: light;
+  --ink: #16191d; --muted: #5f6b76; --faint: #8b949e;
+  --rule: #e3e6ea; --rule-strong: #cfd4da; --bg: #ffffff; --soft: #f6f7f9; --hover: #f1f4f8;
+  --accent: #002a5c; --accent-2: #0b4a8f; --accent-soft: #e9eff7;
+  --ok: #1a7f37; --ok-soft: #e7f4ea; --warn: #8a5a00; --warn-soft: #fff3d1; --bad: #b42318; --bad-soft: #fdeceb;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 var(--sans); }
+body { display: flex; flex-direction: column; overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--accent-2); }
+
+/* top bar */
+header { display: flex; align-items: center; gap: 18px; padding: 10px 18px 0; border-bottom: 1px solid var(--rule); flex: none; }
+.brand { font-weight: 650; letter-spacing: .01em; font-size: 14px; padding-bottom: 10px; }
+.folder { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-bottom: 10px; }
+.folder b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
+.folder span { color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; font-size: 12px; }
+nav { margin-left: auto; display: flex; gap: 2px; align-self: flex-end; }
+nav button { border: 0; background: none; padding: 7px 12px 9px; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 500; }
+nav button:hover { color: var(--ink); }
+nav button.on { color: var(--ink); border-bottom-color: var(--accent); }
+nav button .dot { display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: var(--accent-2); margin-left: 5px; vertical-align: 2px; }
+nav button .count { color: var(--faint); font-weight: 400; margin-left: 4px; }
+
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page { flex: 1; min-height: 0; display: none; flex-direction: column; }
+.page.on { display: flex; }
+
+/* buttons */
+.btn { border: 1px solid var(--rule-strong); background: #fff; border-radius: 6px; padding: 5px 11px; line-height: 18px; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 550; }
+.btn.primary:hover { background: var(--accent-2); }
+.btn.big { padding: 8px 18px; font-size: 14px; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; background: #fff; }
+.btn.primary:disabled { background: var(--accent); }
+.link { border: 0; background: none; color: var(--accent-2); padding: 0; }
+.link:hover { text-decoration: underline; }
+
+/* toolbar */
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--rule); flex: none; flex-wrap: wrap; }
+.toolbar .grow { flex: 1; }
+.search { border: 1px solid var(--rule-strong); border-radius: 6px; padding: 5px 9px; width: 220px; }
+.search:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent-2); }
+.chips { display: flex; gap: 4px; }
+.chip { border: 1px solid var(--rule); background: #fff; border-radius: 999px; padding: 3px 10px; color: var(--muted); font-size: 12px; }
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 550; }
+.chip.bad.on { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+.saved { color: var(--faint); font-size: 12px; }
+.bulk { display: none; align-items: center; gap: 8px; padding: 8px 18px; background: var(--accent-soft); border-bottom: 1px solid var(--rule); flex: none; flex-wrap: wrap; }
+.bulk.on { display: flex; }
+.bulk b { color: var(--accent); margin-right: 6px; }
+.bulk label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 5px; }
+.bulk select { border: 1px solid var(--rule-strong); border-radius: 5px; background: #fff; padding: 3px 6px; }
+
+/* tables */
+.scroll { flex: 1; min-height: 0; overflow: auto; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; }
+th { position: sticky; top: 0; z-index: 2; background: #fff; text-align: left; font-weight: 550; color: var(--muted); font-size: 12px;
+     padding: 7px 6px; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; }
+th[data-sort] { cursor: pointer; }
+th[data-sort]:hover { color: var(--ink); }
+td { padding: 3px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:hover td { background: #fbfcfd; }
+td.c, th.c { text-align: center; }
+td.r, th.r { text-align: right; }
+.num { color: var(--faint); font-variant-numeric: tabular-nums; padding-top: 8px; text-align: right; }
+.mono { font-family: var(--mono); font-size: 12px; }
+#samplesTable { table-layout: fixed; min-width: 1330px; }
+#samplesTable.all { min-width: 1810px; }
+.cell { width: 100%; border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 3px 5px; min-height: 26px; }
+.cell:hover { border-color: var(--rule); }
+.cell:focus { outline: none; border-color: var(--accent-2); background: #fff; box-shadow: 0 0 0 2px var(--accent-soft); }
+select.cell { appearance: none; -webkit-appearance: none; padding-right: 18px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--faint) 50%), linear-gradient(135deg, var(--faint) 50%, transparent 50%);
+  background-position: calc(100% - 9px) 11px, calc(100% - 5px) 11px; background-size: 4px 4px; background-repeat: no-repeat; }
+.cell.err { border-color: var(--bad); background: var(--bad-soft); }
+.cell.empty { color: var(--faint); }
+.deltas { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.info { font-size: 11.5px; color: var(--muted); padding: 1px 6px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info .m { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.info .e { color: var(--bad); }
+.info .g { color: var(--warn); }
+tr.rerr td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
+tr.rskip td { color: var(--faint); }
+tr.rskip td:first-child { box-shadow: inset 3px 0 0 var(--rule-strong); }
+tr.rblank td { background: var(--soft); }
+tr.sel td { background: var(--accent-soft) !important; }
+input[type=checkbox] { accent-color: var(--accent); margin: 7px 0 0 4px; }
+
+/* pills */
+.pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 550; white-space: nowrap; }
+.pill.yes { background: var(--ok-soft); color: var(--ok); }
+.pill.weak { background: var(--warn-soft); color: var(--warn); }
+.pill.no { background: var(--soft); color: var(--muted); }
+.pill.blank { background: var(--soft); color: var(--muted); font-weight: 450; }
+
+/* cards, empty states */
+.center { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 56px 24px; }
+.card { width: min(680px, 100%); }
+.card h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -.01em; }
+.card h2 { font-size: 13px; font-weight: 600; margin: 26px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.card p { color: var(--muted); margin: 0 0 16px; }
+.recent { border-top: 1px solid var(--rule); }
+.recent button { display: flex; width: 100%; text-align: left; gap: 12px; align-items: baseline; border: 0; border-bottom: 1px solid var(--rule); background: none; padding: 9px 4px; }
+.recent button:hover { background: var(--hover); }
+.recent b { font-weight: 550; }
+.recent span { color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facts { border-top: 1px solid var(--rule); margin: 0 0 18px; }
+.facts div { display: flex; gap: 12px; padding: 7px 2px; border-bottom: 1px solid var(--rule); }
+.facts dt { width: 150px; color: var(--muted); flex: none; }
+.facts dd { margin: 0; }
+
+/* run page */
+.runpage { flex: 1; overflow: auto; padding: 22px 28px 40px; }
+.runcols { display: grid; grid-template-columns: minmax(320px, 520px) minmax(300px, 1fr); gap: 34px; align-items: start; }
+.section h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 2px; border-bottom: 1px solid var(--rule); }
+.opt:first-of-type { border-top: 1px solid var(--rule); }
+.opt input { margin-top: 3px; accent-color: var(--accent); }
+.opt small { display: block; color: var(--muted); }
+.settings { display: grid; grid-template-columns: 1fr 90px; gap: 6px 12px; align-items: center; margin-top: 8px; }
+.settings input { border: 1px solid var(--rule-strong); border-radius: 5px; padding: 4px 7px; text-align: right; width: 90px; }
+.settings small { color: var(--faint); display: block; }
+.warnbox { background: var(--bad-soft); border: 1px solid #f4c7c3; color: var(--bad); border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+.okbox { background: var(--ok-soft); border: 1px solid #bfe2c8; border-radius: 8px; padding: 12px 14px; margin: 0 0 12px; }
+.okbox b { color: var(--ok); }
+.progress { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; margin: 10px 0 6px; }
+.progress div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+pre.log { background: var(--soft); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font: 11.5px/1.45 var(--mono);
+          max-height: 46vh; overflow: auto; white-space: pre-wrap; margin: 10px 0 0; color: #33393f; }
+details summary { cursor: pointer; color: var(--muted); margin-top: 10px; }
+
+/* results */
+.stats { display: flex; gap: 28px; padding: 14px 18px; border-bottom: 1px solid var(--rule); align-items: baseline; flex-wrap: wrap; flex: none; }
+.stat b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); margin-left: 6px; }
+.stats .grow { flex: 1; }
+.detail td { background: #fcfcfd; padding: 14px 18px 18px; }
+.detail .grid { display: grid; grid-template-columns: 260px 1fr; gap: 24px; }
+.detail img { width: 260px; height: 220px; object-fit: contain; border: 1px solid var(--rule); border-radius: 8px; background: #fff; }
+.detail h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.detail table { width: auto; margin-bottom: 14px; }
+.detail table td, .detail table th { position: static; padding: 3px 10px 3px 0; font-size: 12px; border-bottom: 1px solid var(--rule); background: none; }
+.detail p { margin: 0 0 12px; }
+tr.clickable { cursor: pointer; }
+.trunc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* blocks */
+#blocksTable { table-layout: fixed; min-width: 1360px; }
+.errtext { color: var(--bad); font-size: 11.5px; }
+.note { color: var(--muted); font-size: 12px; }
+
+/* popover, modal, toast */
+.pop { position: fixed; z-index: 20; background: #fff; border: 1px solid var(--rule-strong); border-radius: 10px; box-shadow: 0 12px 32px rgba(10,20,30,.16);
+       width: 420px; max-height: 70vh; display: flex; flex-direction: column; }
+.pop .body { overflow: auto; padding: 12px 14px; }
+.pop .foot { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--rule); align-items: center; }
+.pop .foot input { flex: 1; border: 1px solid var(--rule); border-radius: 5px; padding: 4px 7px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.pop h5 { margin: 12px 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pop label { display: flex; gap: 8px; padding: 3px 0; align-items: baseline; }
+.pop label small { color: var(--faint); }
+.pop .codes { columns: 2; column-gap: 14px; }
+.pop .codes label { break-inside: avoid; font-size: 12px; }
+.pop .codes label span { font-family: var(--mono); }
+.veil { position: fixed; inset: 0; background: rgba(20,25,30,.28); z-index: 30; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 12px; width: min(460px, 92vw); padding: 20px 22px 16px; box-shadow: 0 20px 50px rgba(0,0,0,.22); }
+.modal h3 { margin: 0 0 8px; font-size: 15px; }
+.modal p { color: var(--muted); margin: 0 0 16px; white-space: pre-wrap; }
+.modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px;
+         font-size: 12.5px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 40; max-width: 70vw; }
+#toast.on { opacity: 1; }
+iframe { border: 0; flex: 1; width: 100%; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">MS Report</div>
+  <div class="folder" id="folderBox"></div>
+  <nav id="tabs" class="hidden">
+    <button data-tab="samples">Samples<span class="count" id="tabSamplesCount"></span><span id="dirtyDot"></span></button>
+    <button data-tab="run">Run</button>
+    <button data-tab="results">Results<span class="count" id="tabResultsCount"></span></button>
+    <button data-tab="blocks">Building blocks</button>
+    <button data-tab="help">Help</button>
+  </nav>
+</header>
+<main>
+  <section class="page" id="page-home"></section>
+  <section class="page" id="page-samples"></section>
+  <section class="page" id="page-run"></section>
+  <section class="page" id="page-results"></section>
+  <section class="page" id="page-blocks"></section>
+  <section class="page" id="page-help"></section>
+</main>
+<div id="toast"></div>
+
+<script>
+const TOKEN = '__TOKEN__';
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const S = {folder: null, info: null, rows: [], extra: [], mtime: null, dirty: false, val: [], sel: new Set(), lastSel: null,
+           filter: '', view: 'all', allCols: false, results: null, resFilter: 'all', resSort: null, resOpen: null,
+           deltas: null, tab: 'samples', blocks: null, bval: [], bFilter: '', bKind: 'all', bDirty: false,
+           state: null, runOpt: 'all', polling: false, logSince: 0, log: []};
+let KEY = 0;
+
+async function api(name, body = {}) {
+  if (S.folder && !('folder' in body)) body.folder = S.folder;
+  try {
+    const r = await fetch('/api/' + name, {method: 'POST', headers: {'X-Token': TOKEN, 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    return await r.json();
+  } catch (e) { return {ok: false, error: 'The dashboard stopped responding. Close the window and open MS Report again.'}; }
+}
+function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms); }
+function ask(title, text, buttons) {
+  return new Promise(res => {
+    const v = document.createElement('div'); v.className = 'veil';
+    v.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p>${esc(text)}</p><div class="row">${
+      buttons.map((b, i) => `<button class="btn ${b.primary ? 'primary' : ''} ${b.danger ? 'danger' : ''}" data-i="${i}">${esc(b.label)}</button>`).join('')}</div></div>`;
+    document.body.appendChild(v);
+    v.addEventListener('click', e => { const b = e.target.closest('button'); if (b) { v.remove(); res(buttons[+b.dataset.i].value); } });
+    const p = v.querySelector('.btn.primary') || v.querySelector('.btn'); p && p.focus();
+  });
+}
+const showError = (msg) => ask('Something needs fixing', msg, [{label: 'OK', value: true, primary: true}]);
+const fileUrl = p => `/file?t=${encodeURIComponent(TOKEN)}&path=${encodeURIComponent(p)}`;
+const plural = (n, w, ws) => `${n} ${n === 1 ? w : (ws || w + 's')}`;
+
+/* ------------------------------------------------------------------ tabs */
+function setTab(t) {
+  S.tab = t;
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $$('.page').forEach(p => p.classList.toggle('on', p.id === 'page-' + (S.folder ? t : 'home')));
+  if (!S.folder) return;
+  if (t === 'samples' && $('#samplesTable')) renderTable();
+  if (t === 'run') renderRun();
+  if (t === 'results') loadResults();
+  if (t === 'blocks' && !S.blocks) loadBlocks();
+  if (t === 'help') renderHelp();
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
+
+function renderHeader() {
+  const fb = $('#folderBox');
+  if (!S.folder) { fb.innerHTML = ''; $('#tabs').classList.add('hidden'); return; }
+  fb.innerHTML = `<b title="${esc(S.folder)}">${esc(S.info.name)}</b><span title="${esc(S.info.parent)}">${esc(S.info.parent)}</span>
+    <button class="link" id="changeFolder">Change</button><button class="link" id="revealFolder">Show in Finder</button>`;
+  $('#tabs').classList.remove('hidden');
+  $('#changeFolder').onclick = chooseFolder;
+  $('#revealFolder').onclick = () => api('open', {path: S.folder});
+  updateCounts();
+}
+function updateCounts() {
+  const n = S.rows.filter(r => (r.role || 'sample') !== 'blank').length;
+  $('#tabSamplesCount').textContent = S.info && S.info.has_samples ? n : '';
+  $('#dirtyDot').innerHTML = S.dirty ? '<span class="dot" title="Unsaved changes"></span>' : '';
+  const R = S.results && S.results.rows || [];
+  $('#tabResultsCount').textContent = R.length ? `${R.filter(r => r.found === 'yes').length}/${R.length}` : '';
+}
+
+/* ------------------------------------------------------------------ home */
+async function renderHome() {
+  S.state = S.state || await api('state');
+  const rec = (S.state.recent || []);
+  $('#page-home').innerHTML = `<div class="center"><div class="card">
+    <h1>Make an MS report</h1>
+    <p>Choose the folder that holds the .raw files, together with the synthesis Excel sheet or a CSV of sequences.
+       The report is saved inside that folder, in MS_report.</p>
+    <button class="btn primary big" id="homeChoose">Choose folder…</button>
+    ${rec.length ? `<h2>Recent folders</h2><div class="recent">${rec.map(r => `<button data-path="${esc(r.path)}"><b>${esc(r.path.split('/').pop())}</b><span>${esc(r.path)}</span></button>`).join('')}</div>` : ''}
+  </div></div>`;
+  $('#homeChoose').onclick = chooseFolder;
+  $$('#page-home .recent button').forEach(b => b.onclick = () => openFolder(b.dataset.path));
+  setTab(S.tab);
+}
+async function chooseFolder() {
+  if (S.dirty && !(await confirmLeave())) return;
+  const r = await api('choose_folder', {start: S.folder ? S.info.parent : ''});
+  if (r.ok && r.folder) openFolder(r.folder);
+}
+async function confirmLeave() {
+  const v = await ask('Save changes to samples.csv?', 'You have edits that are not saved yet.',
+    [{label: 'Cancel', value: 'cancel'}, {label: "Don't save", value: 'discard'}, {label: 'Save', value: 'save', primary: true}]);
+  if (v === 'save') return await saveSamples();
+  return v === 'discard';
+}
+async function openFolder(path) {
+  const r = await api('open_folder', {folder: path});
+  if (!r.ok) { showError(r.error); return; }
+  S.folder = r.folder; S.info = r; S.blocks = null; S.results = null; S.resOpen = null;
+  setRows(r.rows, r.extra_columns, r.samples_mtime);
+  history.replaceState(null, '', `/?t=${encodeURIComponent(TOKEN)}&folder=${encodeURIComponent(r.folder)}`);
+  renderHeader();
+  setTab(r.has_samples ? (S.tab === 'help' || S.tab === 'blocks' ? S.tab : 'samples') : 'samples');
+  renderSamples();
+  validate();
+  if (r.has_results) loadResults(true);
+}
+function setRows(rows, extra, mtime) {
+  S.rows = (rows || []).map(r => ({...r, _k: ++KEY}));
+  S.extra = extra || []; S.mtime = mtime; S.dirty = false; S.sel.clear(); S.val = [];
+}
+
+/* ------------------------------------------------------------------ samples */
+const COLS = [
+  {f: 'id', label: 'ID', w: 74, tip: 'Sample id; used in file names. Must be unique.'},
+  {f: 'name', label: 'Name', w: 170, tip: 'Slide title'},
+  {f: 'sequence', label: 'Sequence', w: null, tip: 'One letter per residue; (Aib) for non-canonical; K[Biotin] for a side-chain tag; Ac-…-NH2 for the ends of a linear peptide'},
+  {f: 'topology', label: 'Topology', w: 124, sel: true, tip: 'head-to-tail (cyclic) or linear'},
+  {f: 'raw_file', label: 'Raw file', w: 196, sel: true, tip: 'The MS run of this sample'},
+  {f: 'blank_file', label: 'Blank', w: 150, sel: true, tip: 'Blank (solvent) run for this sample: grey trace behind the TIC, subtracted from the spectrum, and main peaks also in the blank are marked'},
+  {f: 'spectrum_rt', label: 'Line at (min)', w: 92, tip: 'Optional: retention time for the red line in E and the spectrum in D. Empty = at the expected product if found, otherwise at the TIC maximum (grey line). In Results you can pick one of the biggest LC peaks.'},
+  {f: 'find_deltas', label: 'Find deltas', w: 142, tip: 'What else to search for besides the expected peptide'},
+  {f: 'role', label: 'Role', w: 86, sel: true, tip: 'sample, or blank (a solvent run; gets no slide)'},
+  {f: 'hplc_file', label: 'HPLC file', w: 160, sel: true, more: true, tip: 'Optional 2-column export (time, absorbance) for panel B'},
+  {f: 'observed_mz', label: 'Observed m/z', w: 150, more: true, tip: 'm/z values you read yourself, separated by ;'},
+  {f: 'notes', label: 'Notes', w: 220, more: true, tip: 'Free text; copied into the slide notes'},
+];
+const TEXT_FIELDS = ['id', 'name', 'sequence', 'spectrum_rt', 'observed_mz', 'notes'];
+const visCols = () => COLS.filter(c => !c.more || S.allCols);
+
+function options(f, value) {
+  const o = (v, l, cur) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`;
+  const I = S.info, raws = I.raw_files || [];
+  if (f === 'topology') return o('', 'choose…', value) + o('head-to-tail', 'head-to-tail', value) + o('linear', 'linear', value) +
+    (value && !['head-to-tail', 'linear'].includes(value) ? o(value, value + ' (unknown)', value) : '');
+  if (f === 'role') return o('sample', 'sample', value || 'sample') + o('blank', 'blank', value) + (value && !['sample', 'blank', ''].includes(value) ? o(value, value, value) : '');
+  if (f === 'raw_file' || f === 'hplc_file') {
+    const list = f === 'raw_file' ? raws : (I.hplc_files || []);
+    return o('', f === 'raw_file' ? '— none (skipped)' : '— none', value) + list.map(x => o(x, x, value)).join('') +
+      (value && !list.includes(value) ? o(value, value + ' (not found)', value) : '');
+  }
+  if (f === 'blank_file') {
+    const bl = I.blank_guess || [], other = raws.filter(x => !bl.includes(x));
+    let h = o('', 'No blank', value);
+    if (value === 'auto') h += o('auto', 'First blank row', value);
+    if (bl.length) h += `<optgroup label="Blank runs">${bl.map(x => o(x, x, value)).join('')}</optgroup>`;
+    if (other.length) h += `<optgroup label="Other runs">${other.map(x => o(x, x, value)).join('')}</optgroup>`;
+    if (value && value !== 'auto' && value !== '__bulk' && !raws.includes(value)) h += o(value, value + ' (not found)', value);
+    return h;
+  }
+  return '';
+}
+
+function visibleRows() {
+  const q = S.filter.trim().toLowerCase();
+  return S.rows.map((r, i) => i).filter(i => {
+    const r = S.rows[i], v = S.val[i] || {};
+    if (S.view === 'problems' && !(hasErrors(i) && !v.skipped)) return false;
+    if (S.view === 'skipped' && !(v.skipped && !v.blank)) return false;
+    if (S.view === 'blanks' && (r.role || 'sample') !== 'blank') return false;
+    if (!q) return true;
+    return ['id', 'name', 'sequence', 'raw_file', 'notes'].some(f => (r[f] || '').toLowerCase().includes(q));
+  });
+}
+const hasErrors = i => { const v = S.val[i]; return v && Object.keys(v.errors || {}).length > 0; };
+
+function renderSamples() {
+  const P = $('#page-samples');
+  const I = S.info;
+  if (!I.has_samples) {
+    const blanks = I.blank_guess || [];
+    P.innerHTML = `<div class="center"><div class="card">
+      <h1>New folder</h1>
+      <p>There is no samples.csv here yet. The dashboard can read the sequences and match them to the raw files; you then check the table and make the report.</p>
+      <dl class="facts">
+        <div><dt>Raw files</dt><dd>${I.raw_files.length ? plural(I.raw_files.length, 'file') : '<span class="info e">none: is this the right folder?</span>'}</dd></div>
+        <div><dt>Blank runs</dt><dd>${blanks.length ? esc(blanks.join(', ')) : 'none recognised (name with H2O, blank, water, solvent or wash), you can pick one later'}</dd></div>
+        <div><dt>Sequence files</dt><dd>${I.sources.length ? esc(I.sources.join(', ')) : 'none; rows are made from the raw files and you type the sequences'}</dd></div>
+      </dl>
+      <button class="btn primary big" id="doSetup"${I.raw_files.length ? '' : ' disabled'}>Read sequences and match raw files</button>
+    </div></div>`;
+    $('#doSetup').onclick = () => runSetup(false);
+    return;
+  }
+  const counts = viewCounts();
+  P.innerHTML = `
+    <div class="toolbar">
+      <input class="search" id="sFilter" placeholder="Filter by id, name, sequence, file" value="${esc(S.filter)}">
+      <div class="chips" id="sView">
+        <button class="chip ${S.view === 'all' ? 'on' : ''}" data-v="all">All ${S.rows.length}</button>
+        <button class="chip bad ${S.view === 'problems' ? 'on' : ''}" data-v="problems">Needs fixing <span id="cntProblems">${counts.problems}</span></button>
+        <button class="chip ${S.view === 'skipped' ? 'on' : ''}" data-v="skipped">No raw file <span id="cntSkipped">${counts.skipped}</span></button>
+        <button class="chip ${S.view === 'blanks' ? 'on' : ''}" data-v="blanks">Blanks ${counts.blanks}</button>
+      </div>
+      <label class="note" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="allCols" ${S.allCols ? 'checked' : ''} style="margin:0">All columns</label>
+      <div class="grow"></div>
+      <button class="btn" id="sReread" title="Read the sequence file again and rebuild samples.csv (the old one is kept as samples_old.csv)">Re-read sequences…</button>
+      <button class="btn" id="sExcel" title="Open samples.csv in Excel. Save there, then come back here; the table reloads.">Open in Excel</button>
+      <button class="btn" id="sAdd">Add row</button>
+      <span class="saved" id="savedState">${S.dirty ? '' : 'Saved'}</span>
+      <button class="btn primary" id="sSave" ${S.dirty ? '' : 'disabled'}>Save</button>
+    </div>
+    <div class="bulk" id="bulk"></div>
+    <div class="scroll" id="sScroll"><table id="samplesTable" class="${S.allCols ? 'all' : ''}"></table></div>`;
+  $('#sFilter').oninput = e => { S.filter = e.target.value; renderTable(); };
+  $('#sView').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; S.view = b.dataset.v; $$('#sView .chip').forEach(c => c.classList.toggle('on', c === b)); renderTable(); };
+  $('#allCols').onchange = e => { S.allCols = e.target.checked; $('#samplesTable').classList.toggle('all', S.allCols); renderTable(); };
+  $('#sSave').onclick = saveSamples;
+  $('#sAdd').onclick = addRow;
+  $('#sExcel').onclick = openInExcel;
+  $('#sReread').onclick = async () => {
+    const v = await ask('Re-read the sequence file?', 'samples.csv is rebuilt from the Excel/CSV sequence file and the raw files. Your current samples.csv is kept as samples_old.csv.',
+      [{label: 'Cancel', value: false}, {label: 'Re-read', value: true, primary: true}]);
+    if (v) runSetup(true);
+  };
+  renderTable();
+}
+function viewCounts() {
+  let problems = 0, skipped = 0, blanks = 0;
+  S.rows.forEach((r, i) => { const v = S.val[i] || {};
+    if ((r.role || 'sample') === 'blank') blanks++;
+    else if (v.skipped) skipped++;
+    if (hasErrors(i) && !v.skipped) problems++; });
+  return {problems, skipped, blanks};
+}
+
+function renderTable() {
+  const T = $('#samplesTable'); if (!T) return;
+  const cols = visCols(), vis = visibleRows();
+  const allSel = vis.length && vis.every(i => S.sel.has(S.rows[i]._k));
+  const resBy = {};
+  (S.results && S.results.rows || []).forEach(r => resBy[r.id] = r);
+  T.innerHTML = `<colgroup><col style="width:30px"><col style="width:34px">${cols.map(c => `<col style="${c.w ? 'width:' + c.w + 'px' : 'min-width:300px'}">`).join('')}<col style="width:84px"></colgroup>
+    <thead><tr><th><input type="checkbox" id="selAll" ${allSel ? 'checked' : ''} title="Select all shown"></th><th class="r">#</th>
+    ${cols.map(c => `<th title="${esc(c.tip)}">${c.label}</th>`).join('')}<th title="From the last report">Last result</th></tr></thead>
+    <tbody>${vis.map(i => rowHTML(i, cols, resBy)).join('') || `<tr><td colspan="${cols.length + 3}" class="note" style="padding:24px">No rows match.</td></tr>`}</tbody>`;
+  vis.forEach(i => paintRow(i));
+  renderBulk();
+}
+function rowHTML(i, cols, resBy) {
+  const r = S.rows[i];
+  const cells = cols.map(c => {
+    const v = r[c.f] ?? '';
+    if (c.f === 'find_deltas') return `<td><button class="cell deltas ${v ? '' : 'empty'}" data-f="find_deltas" title="${esc(v || 'auto')}">${esc(v || 'auto')}</button></td>`;
+    if (c.sel) return `<td><select class="cell" data-f="${c.f}">${options(c.f, v)}</select></td>`;
+    const extra = c.f === 'sequence' ? ' mono' : '';
+    return `<td${c.f === 'sequence' ? ' class="seq"' : ''}><input class="cell${extra}" data-f="${c.f}" value="${esc(v)}" spellcheck="false" autocomplete="off">${c.f === 'sequence' ? '<div class="info"></div>' : ''}</td>`;
+  }).join('');
+  const res = resBy[r.id];
+  const pill = (r.role || 'sample') === 'blank' ? '<span class="pill blank">blank</span>'
+    : res ? `<span class="pill ${res.found}" title="${esc(res.ions_found || '')}">${{yes: 'found', weak: 'weak', no: 'not found'}[res.found] || esc(res.found)}</span>` : '';
+  return `<tr data-i="${i}" class="${S.sel.has(r._k) ? 'sel' : ''}"><td><input type="checkbox" class="rsel" ${S.sel.has(r._k) ? 'checked' : ''}></td><td class="num">${i + 1}</td>${cells}<td style="padding-top:7px">${pill}</td></tr>`;
+}
+function paintRow(i) {
+  const tr = $(`#samplesTable tr[data-i="${i}"]`); if (!tr) return;
+  const v = S.val[i] || {errors: {}, info: {}};
+  const r = S.rows[i], blank = (r.role || 'sample') === 'blank';
+  tr.classList.toggle('rerr', hasErrors(i) && !v.skipped);
+  tr.classList.toggle('rskip', !!v.skipped && !blank);
+  tr.classList.toggle('rblank', blank);
+  $$('.cell', tr).forEach(el => { const e = (v.errors || {})[el.dataset.f]; el.classList.toggle('err', !!e); el.title = e || (el.dataset.f === 'find_deltas' ? (r.find_deltas || 'auto') : ''); });
+  const info = $('.info', tr); if (!info) return;
+  const parts = [];
+  const I = v.info || {}, errs = v.errors || {};
+  if (blank) parts.push('<span>blank run: no slide; choose it in the Blank column of the samples</span>');
+  else {
+    if (I.mass) {
+      parts.push(`${I.residues} res`, `<span class="m">${esc(I.formula)}</span>`, `M <span class="m">${I.mass.toFixed(4)}</span>`);
+      (I.ions || []).slice(0, 3).forEach(([l, mz]) => parts.push(`${esc(l)} <span class="m">${mz.toFixed(4)}</span>`));
+      if (I.deltas != null) parts.push(`${I.deltas} deltas`);
+      if (I.guess) parts.push('<span class="g">mass guessed until topology is set</span>');
+    }
+    if (v.skipped) parts.unshift('<span class="g">no raw file: skipped</span>');
+    const labels = {id: 'ID', sequence: 'Sequence', topology: 'Topology', raw_file: 'Raw file', blank_file: 'Blank', hplc_file: 'HPLC', find_deltas: 'Find deltas', observed_mz: 'Observed', role: 'Role', spectrum_rt: 'Line at'};
+    const e = Object.entries(errs).map(([f, m]) => `<span class="e">${labels[f] || f}: ${esc(m)}</span>`);
+    parts.unshift(...e);
+  }
+  info.innerHTML = parts.join(' · ');
+  info.title = info.textContent;
+}
+function renderBulk() {
+  const B = $('#bulk'); if (!B) return;
+  const n = S.sel.size;
+  B.classList.toggle('on', n > 0);
+  if (!n) { B.innerHTML = ''; return; }
+  B.innerHTML = `<b>${plural(n, 'row')} selected</b>
+    <label>Topology <select data-bulk="topology"><option value="">…</option><option>head-to-tail</option><option>linear</option></select></label>
+    <label>Blank <select data-bulk="blank_file"><option value="__">…</option>${options('blank_file', '__bulk')}</select></label>
+    <label>Role <select data-bulk="role"><option value="">…</option><option>sample</option><option>blank</option></select></label>
+    <button class="btn" id="bulkDeltas">Find deltas…</button>
+    <button class="btn danger" id="bulkDelete">Delete rows</button>
+    <div style="flex:1"></div><button class="link" id="bulkClear">Clear selection</button>`;
+  $$('select[data-bulk]', B).forEach(s => s.onchange = () => {
+    const f = s.dataset.bulk, val = s.value;
+    if ((f === 'blank_file' && val === '__') || (f !== 'blank_file' && !val)) return;
+    applyToSelected(f, val);
+    toast(`${f === 'blank_file' ? 'Blank' : f[0].toUpperCase() + f.slice(1)} set for ${plural(n, 'row')}`);
+  });
+  $('#bulkDeltas').onclick = e => openDeltas(e.target, null);
+  $('#bulkDelete').onclick = async () => {
+    const v = await ask(`Delete ${plural(n, 'row')}?`, 'The rows are removed from the table. Nothing is deleted on disk until you save, and the raw files are never touched.',
+      [{label: 'Cancel', value: false}, {label: 'Delete', value: true, danger: true, primary: true}]);
+    if (!v) return;
+    S.rows = S.rows.filter(r => !S.sel.has(r._k)); S.sel.clear(); S.val = []; markDirty(); renderTable(); validate();
+  };
+  $('#bulkClear').onclick = () => { S.sel.clear(); renderTable(); };
+}
+function applyToSelected(f, val) {
+  S.rows.forEach(r => { if (S.sel.has(r._k)) r[f] = val; });
+  markDirty(); renderTable(); validate();
+}
+function markDirty() {
+  S.dirty = true; updateCounts();
+  const b = $('#sSave'); if (b) b.disabled = false;
+  const s = $('#savedState'); if (s) s.textContent = '';
+}
+
+/* table events */
+document.addEventListener('input', e => {
+  const el = e.target; if (!el.matches('#samplesTable .cell')) return;
+  const i = +el.closest('tr').dataset.i; S.rows[i][el.dataset.f] = el.value; markDirty(); validateSoon();
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.matches('#samplesTable select.cell')) {
+    const i = +el.closest('tr').dataset.i; S.rows[i][el.dataset.f] = el.value; markDirty();
+    if (el.dataset.f === 'role') { renderTable(); }
+    validate();
+  }
+});
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.id === 'selAll') {
+    const vis = visibleRows();
+    vis.forEach(i => t.checked ? S.sel.add(S.rows[i]._k) : S.sel.delete(S.rows[i]._k));
+    renderTable(); return;
+  }
+  if (t.classList.contains('rsel')) {
+    const i = +t.closest('tr').dataset.i, k = S.rows[i]._k;
+    if (e.shiftKey && S.lastSel != null) {
+      const vis = visibleRows(), a = vis.indexOf(S.lastSel), b = vis.indexOf(i);
+      if (a >= 0 && b >= 0) vis.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(j => t.checked ? S.sel.add(S.rows[j]._k) : S.sel.delete(S.rows[j]._k));
+    } else t.checked ? S.sel.add(k) : S.sel.delete(k);
+    S.lastSel = i;
+    $$('#samplesTable tbody tr').forEach(tr => { const j = +tr.dataset.i; if (!isNaN(j)) { tr.classList.toggle('sel', S.sel.has(S.rows[j]._k)); const c = $('.rsel', tr); if (c) c.checked = S.sel.has(S.rows[j]._k); } });
+    renderBulk(); return;
+  }
+  if (t.matches('#samplesTable button.deltas')) { openDeltas(t, +t.closest('tr').dataset.i); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (S.tab === 'blocks') saveBlocks(); else if (S.dirty) saveSamples(); return; }
+  const el = e.target;
+  if (!el.matches || !el.matches('#samplesTable input.cell')) return;
+  if (['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+    const vis = visibleRows(), i = +el.closest('tr').dataset.i, p = vis.indexOf(i);
+    const q = e.key === 'ArrowUp' ? p - 1 : p + 1;
+    if (q >= 0 && q < vis.length) { e.preventDefault(); const n = $(`#samplesTable tr[data-i="${vis[q]}"] .cell[data-f="${el.dataset.f}"]`); n && (n.focus(), n.select && n.select()); }
+  }
+});
+/* paste a column from Excel: fills down, adding rows when needed */
+document.addEventListener('paste', e => {
+  const el = e.target; if (!el.matches || !el.matches('#samplesTable input.cell')) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\r/g, '');
+  const lines = text.split('\n'); while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  if (lines.length < 2 && !lines.some(l => l.includes('\t'))) return;
+  e.preventDefault();
+  const here = +el.closest('tr').dataset.i, isBlank = i => (S.rows[i].role || 'sample') === 'blank';
+  const vis = visibleRows().filter(i => i === here || !isBlank(i)), start = vis.indexOf(here);
+  const targets = vis.slice(start).map(i => S.rows[i]);   // the rows to fill, top to bottom (blank rows skipped)
+  const fields = visCols().map(c => c.f).filter(f => TEXT_FIELDS.includes(f));
+  const f0 = fields.indexOf(el.dataset.f);
+  let added = 0;
+  lines.forEach((line, n) => {
+    let row = targets[n];
+    if (!row) {   // more lines than rows: new rows go above the blank rows
+      row = newRow(); const fb = S.rows.findIndex(r => (r.role || 'sample') === 'blank');
+      if (fb >= 0) S.rows.splice(fb, 0, row); else S.rows.push(row); added++;
+    }
+    line.split('\t').forEach((cell, c) => { const f = fields[f0 + c]; if (f) row[f] = cell.trim(); });
+  });
+  markDirty(); S.val = []; renderTable(); validate();
+  toast(`Pasted ${plural(lines.length, 'line')}${added ? `, ${added} new row${added > 1 ? 's' : ''} added` : ''}`);
+});
+
+function newRow() {
+  const nums = S.rows.map(r => parseInt(r.id, 10)).filter(n => !isNaN(n));
+  const blanks = S.rows.filter(r => (r.role || 'sample') !== 'blank').map(r => r.blank_file).filter(Boolean);
+  const blank = blanks.length ? blanks.sort((a, b) => blanks.filter(x => x === b).length - blanks.filter(x => x === a).length)[0] : (S.info.blank_guess || [''])[0] || '';
+  const tops = S.rows.map(r => r.topology).filter(t => ['head-to-tail', 'linear'].includes(t));
+  const topology = tops.length ? tops.sort((a, b) => tops.filter(x => x === b).length - tops.filter(x => x === a).length)[0] : '';
+  const r = {_k: ++KEY, id: String(nums.length ? Math.max(...nums) + 1 : S.rows.length + 1), name: '', sequence: '', topology, raw_file: '', blank_file: blank,
+    hplc_file: '', role: 'sample', find_deltas: 'auto', observed_mz: '', notes: ''};
+  S.extra.forEach(c => r[c] = '');
+  return r;
+}
+function addRow() {
+  const firstBlank = S.rows.findIndex(r => (r.role || 'sample') === 'blank');
+  const r = newRow();
+  if (firstBlank >= 0) S.rows.splice(firstBlank, 0, r); else S.rows.push(r);
+  S.val = []; S.view = 'all'; S.filter = '';
+  markDirty(); renderSamples(); validate();
+  const tr = $(`#samplesTable tr[data-i="${S.rows.indexOf(r)}"]`);
+  if (tr) { tr.scrollIntoView({block: 'center'}); $('.cell[data-f="sequence"]', tr).focus(); }
+}
+
+/* validation */
+let vTimer = null, vSeq = 0;
+function validateSoon() { clearTimeout(vTimer); vTimer = setTimeout(validate, 280); }
+async function validate() {
+  if (!S.info || !S.info.has_samples) return;
+  const my = ++vSeq;
+  const rows = S.rows.map(({_k, ...r}) => r);
+  const r = await api('validate', {rows});
+  if (my !== vSeq || !r.ok) { if (!r.ok) toast(r.error, 5000); return; }
+  S.val = r.results;
+  $$('#samplesTable tbody tr[data-i]').forEach(tr => paintRow(+tr.dataset.i));
+  const c = viewCounts();
+  const cp = $('#cntProblems'); if (cp) cp.textContent = c.problems;
+  const cs = $('#cntSkipped'); if (cs) cs.textContent = c.skipped;
+  if (S.tab === 'run') renderRun();
+}
+
+async function saveSamples(force = false) {
+  const rows = S.rows.map(({_k, ...r}) => r);
+  const r = await api('save', {rows, extra_columns: S.extra, samples_mtime: S.mtime, force});
+  if (r.conflict) {
+    const v = await ask('samples.csv changed on disk', r.error + '\n\nKeep the version in this window (overwrite the file), or load the file and lose the edits made here?',
+      [{label: 'Cancel', value: 'cancel'}, {label: 'Load the file', value: 'load'}, {label: 'Overwrite', value: 'over', primary: true}]);
+    if (v === 'over') return saveSamples(true);
+    if (v === 'load') { await reloadSamples(); }
+    return false;
+  }
+  if (!r.ok) { showError(r.error); return false; }
+  S.mtime = r.samples_mtime; S.dirty = false; updateCounts();
+  const b = $('#sSave'); if (b) b.disabled = true;
+  const s = $('#savedState'); if (s) s.textContent = 'Saved';
+  toast('Saved samples.csv');
+  return true;
+}
+async function reloadSamples() {
+  const r = await api('open_folder', {});
+  if (!r.ok) { showError(r.error); return; }
+  S.info = r; setRows(r.rows, r.extra_columns, r.samples_mtime); renderSamples(); validate();
+}
+async function openInExcel() {
+  if (S.dirty && !(await saveSamples())) return;
+  await api('open', {path: S.folder + '/samples.csv', excel: true});
+  toast('Opened in Excel. Save there (keep CSV format); the table reloads when you come back.', 5000);
+}
+window.addEventListener('focus', async () => {   // came back from Excel: reload if the file changed
+  if (!S.folder || !S.info || !S.info.has_samples || S.dirty) return;
+  const r = await api('open_folder', {});
+  if (r.ok && r.samples_mtime && r.samples_mtime !== S.mtime) {
+    S.info = r; setRows(r.rows, r.extra_columns, r.samples_mtime);
+    if (S.tab === 'samples') renderSamples(); validate(); toast('samples.csv changed on disk; reloaded');
+  }
+});
+async function runSetup(force) {
+  const r = await api('setup', {force});
+  if (!r.ok) { showError(r.error); return; }
+  S.info = r; setRows(r.rows, r.extra_columns, r.samples_mtime);
+  renderHeader(); renderSamples(); await validate();
+  const n = S.rows.filter(x => x.sequence).length;
+  toast(`samples.csv made: ${plural(n, 'sequence')}. Check topology and raw files, then Run.`, 5000);
+}
+
+/* find_deltas popover */
+async function openDeltas(anchor, rowIndex) {
+  closePop();
+  if (!S.deltas) { const r = await api('deltas'); if (!r.ok) { showError(r.error); return; } S.deltas = r; }
+  const D = S.deltas;
+  const cur = rowIndex == null ? 'auto' : (S.rows[rowIndex].find_deltas || 'auto');
+  const toks = cur.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  const groupNames = [...D.builtin.map(b => b.name), ...D.groups.map(g => g.name)];
+  const codes = [...D.groups.flatMap(g => g.items), ...D.loose];
+  let base = toks.includes('all') ? 'all' : toks.includes('none') ? 'none' : toks.includes('auto') ? 'auto' : (toks.some(t => groupNames.includes(t)) ? 'groups' : (toks.length ? 'groups' : 'auto'));
+  const pop = document.createElement('div'); pop.className = 'pop'; pop.id = 'pop';
+  const g = (name, text, n) => `<label><input type="checkbox" data-g="${esc(name)}" ${toks.includes(name) || (base === 'auto' && D.auto.includes(name)) ? 'checked' : ''}><span>${esc(name)}</span><small>${esc(text)}${n != null ? ` · ${n}` : ''}</small></label>`;
+  pop.innerHTML = `<div class="body">
+    <label><input type="radio" name="dbase" value="auto" ${base === 'auto' ? 'checked' : ''}><span><b>auto</b></span><small>usual suspects that fit the sequence (recommended)</small></label>
+    <label><input type="radio" name="dbase" value="all" ${base === 'all' ? 'checked' : ''}><span><b>all</b></span><small>every delta, whatever the sequence (more chance hits)</small></label>
+    <label><input type="radio" name="dbase" value="none" ${base === 'none' ? 'checked' : ''}><span><b>none</b></span><small>only the expected peptide</small></label>
+    <label><input type="radio" name="dbase" value="groups" ${base === 'groups' ? 'checked' : ''}><span><b>choose groups</b></span></label>
+    <div id="dGroups" style="padding-left:22px">${D.builtin.map(b => g(b.name, b.text)).join('')}${D.groups.map(x => g(x.name, 'from building blocks', x.items.length)).join('')}</div>
+    <h5>Also search for single deltas</h5>
+    <input class="search" id="dSearch" placeholder="Filter, e.g. Pbf or 56.06" style="width:100%;margin-bottom:6px">
+    <div class="codes" id="dCodes">${codes.map(c => `<label data-s="${esc((c.code + ' ' + c.name + ' ' + c.mass).toLowerCase())}"><input type="checkbox" data-c="${esc(c.code)}" ${toks.includes(c.code) ? 'checked' : ''}><span>${esc(c.code)}</span><small>${c.mass > 0 ? '+' : ''}${c.mass.toFixed(3)}</small></label>`).join('')}</div>
+  </div>
+  <div class="foot"><input id="dText" readonly title="What goes into samples.csv"><button class="btn" id="dCancel">Cancel</button><button class="btn primary" id="dApply">${rowIndex == null ? `Apply to ${plural(S.sel.size, 'row')}` : 'Apply'}</button></div>`;
+  document.body.appendChild(pop);
+  const rect = anchor.getBoundingClientRect();
+  const top = Math.min(rect.bottom + 4, window.innerHeight - pop.offsetHeight - 10);
+  pop.style.top = Math.max(10, top) + 'px'; pop.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 430)) + 'px';
+  const compose = () => {
+    const b = $('input[name=dbase]:checked', pop).value;
+    const gs = $$('#dGroups input:checked', pop).map(x => x.dataset.g);
+    const cs = $$('#dCodes input:checked', pop).map(x => x.dataset.c);
+    $('#dGroups', pop).style.opacity = b === 'groups' ? 1 : .45;
+    $$('#dGroups input', pop).forEach(x => x.disabled = b !== 'groups');
+    const head = b === 'groups' ? gs : [b];
+    const out = [...head, ...cs.filter(c => !head.includes(c))];
+    return out.length ? out.join(', ') : 'none';
+  };
+  const upd = () => $('#dText', pop).value = compose();
+  pop.addEventListener('change', upd); upd();
+  $('#dSearch', pop).oninput = e => { const q = e.target.value.toLowerCase(); $$('#dCodes label', pop).forEach(l => l.classList.toggle('hidden', q && !l.dataset.s.includes(q))); };
+  $('#dCancel', pop).onclick = closePop;
+  $('#dApply', pop).onclick = () => {
+    const v = compose();
+    if (rowIndex == null) applyToSelected('find_deltas', v);
+    else { S.rows[rowIndex].find_deltas = v; markDirty(); anchor.textContent = v; anchor.classList.remove('empty'); validate(); }
+    closePop();
+  };
+  setTimeout(() => document.addEventListener('mousedown', outside), 0);
+}
+function outside(e) { const p = $('#pop'); if (p && !p.contains(e.target)) closePop(); }
+function closePop() { const p = $('#pop'); if (p) p.remove(); document.removeEventListener('mousedown', outside); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+
+/* ------------------------------------------------------------------ run */
+function runPlan() {
+  const sel = S.rows.map((r, i) => i).filter(i => S.sel.has(S.rows[i]._k) && (S.rows[i].role || 'sample') !== 'blank');
+  const samples = S.rows.map((r, i) => i).filter(i => (S.rows[i].role || 'sample') !== 'blank');
+  const use = S.runOpt === 'selected' ? sel : samples;
+  const withRaw = use.filter(i => S.rows[i].raw_file);
+  const bad = withRaw.filter(i => hasErrors(i));
+  const blankRowsBad = S.rows.map((r, i) => i).filter(i => (S.rows[i].role || 'sample') === 'blank' && hasErrors(i));
+  return {sel, samples, use, withRaw, bad: [...bad, ...blankRowsBad], skipped: use.length - withRaw.length};
+}
+function renderRun() {
+  const P = $('#page-run');
+  if (!S.info.has_samples) { P.innerHTML = `<div class="center"><div class="card"><h1>Nothing to run yet</h1><p>Go to Samples and read the sequences first.</p></div></div>`; return; }
+  const st = S.state || {}, d = {...(st.defaults || {}), ...(st.settings || {})};
+  const plan = runPlan();
+  if (S.runOpt === 'selected' && !plan.sel.length) S.runOpt = 'all';
+  const p2 = runPlan();
+  const running = S.polling;
+  P.innerHTML = `<div class="runpage"><div class="runcols">
+    <div class="section">
+      <h3>Samples</h3>
+      <label class="opt"><input type="radio" name="runOpt" value="all" ${S.runOpt === 'all' ? 'checked' : ''} ${running ? 'disabled' : ''}>
+        <span>All samples<small>${plural(p2.samples.length, 'sample')}${p2.samples.length - S.rows.filter(r => (r.role || 'sample') !== 'blank' && r.raw_file).length ? `, ${S.rows.filter(r => (r.role || 'sample') !== 'blank' && !r.raw_file).length} without a raw file are skipped` : ''}</small></span></label>
+      <label class="opt"><input type="radio" name="runOpt" value="selected" ${S.runOpt === 'selected' ? 'checked' : ''} ${p2.sel.length && !running ? '' : 'disabled'}>
+        <span>Only the rows selected in Samples<small>${p2.sel.length ? plural(p2.sel.length, 'sample') + ' selected. The report then has only these slides.' : 'Tick rows in the Samples tab to use this.'}</small></span></label>
+      ${p2.bad.length ? `<div class="warnbox">${plural(p2.bad.length, 'row')} need fixing first (${p2.bad.slice(0, 8).map(i => esc(S.rows[i].id || '#' + (i + 1))).join(', ')}${p2.bad.length > 8 ? ', …' : ''}).
+         <button class="link" id="goFix">Show them</button></div>` : ''}
+      ${S.dirty ? '<p class="note">Unsaved edits are saved to samples.csv when the report starts.</p>' : ''}
+      <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
+        <button class="btn primary big" id="runGo" ${p2.bad.length || !p2.withRaw.length || running ? 'disabled' : ''}>Make report${p2.withRaw.length ? ` (${plural(p2.withRaw.length, 'sample')})` : ''}</button>
+        ${running ? '<button class="btn" id="runCancel">Cancel</button>' : ''}
+      </div>
+      <details style="margin-top:22px"><summary>Detection settings</summary>
+        <div class="settings">
+          <span>Mass tolerance (ppm)<small>default 5; the Exploris is about 2 ppm</small></span><input id="setPpm" type="number" step="0.5" min="0.5" value="${d.ppm}">
+          <span>Highest charge state<small>default 6</small></span><input id="setZ" type="number" min="1" max="12" value="${d.max_charge}">
+          <span>Smallest peak (% of base peak)<small>default 1</small></span><input id="setRel" type="number" step="0.5" min="0" value="${d.min_rel}">
+          <span>Scans in a row needed<small>default 8</small></span><input id="setScans" type="number" min="1" value="${d.min_scans}">
+        </div>
+        <button class="link" id="setReset" style="margin-top:8px">Back to defaults</button>
+      </details>
+    </div>
+    <div class="section" id="runStatus"><h3>Progress</h3><p class="note">${S.lastRun ? '' : 'The first run of a folder converts each .raw file once (about 10 s each); later runs reuse the conversion.'}</p></div>
+  </div></div>`;
+  $$('input[name=runOpt]', P).forEach(x => x.onchange = () => { S.runOpt = x.value; renderRun(); });
+  const gf = $('#goFix'); if (gf) gf.onclick = () => { S.view = 'problems'; setTab('samples'); renderSamples(); };
+  $('#runGo').onclick = startRun;
+  const rc = $('#runCancel'); if (rc) rc.onclick = () => api('cancel');
+  const saveSet = () => { const s = runSettings(); S.state.settings = s; api('remember_settings', s); };
+  ['setPpm', 'setZ', 'setRel', 'setScans'].forEach(id => $('#' + id).onchange = saveSet);
+  $('#setReset').onclick = () => { const D = st.defaults; $('#setPpm').value = D.ppm; $('#setZ').value = D.max_charge; $('#setRel').value = D.min_rel; $('#setScans').value = D.min_scans; saveSet(); };
+  if (S.lastRun) paintRunStatus(S.lastRun);
+}
+function runSettings() { return {ppm: +$('#setPpm').value, max_charge: +$('#setZ').value, min_rel: +$('#setRel').value, min_scans: +$('#setScans').value}; }
+async function startRun() {
+  if (S.dirty && !(await saveSamples())) return;
+  const plan = runPlan();
+  const ids = plan.withRaw.map(i => S.rows[i].id);
+  const only = S.runOpt === 'selected';
+  const r = await api('run', {ids, only, ...runSettings()});
+  if (!r.ok) { showError(r.error); return; }
+  S.log = []; S.logSince = 0; S.runTotal = ids.length; S.lastRun = {running: true, done: 0, lines: []};
+  S.polling = true; renderRun(); poll();
+}
+async function poll() {
+  const r = await api('run_status', {since: S.logSince});
+  if (!r.ok) { S.polling = false; return; }
+  S.log.push(...r.lines); S.logSince = r.n_lines;
+  S.lastRun = r;
+  if (S.tab === 'run') paintRunStatus(r);
+  if (r.running) setTimeout(poll, 600);
+  else {
+    S.polling = false;
+    if (S.tab === 'run') renderRun();
+    if (r.code === 0) { loadResults(true); toast('Report ready'); }
+  }
+}
+function paintRunStatus(r) {
+  const box = $('#runStatus'); if (!box) return;
+  const total = S.runTotal || (r.ids || []).length || 1;
+  const cur = S.rows.find(x => x.id === r.current);
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const tail = S.log.filter(l => l.trim()).slice(-3);
+  let head = '';
+  if (r.running) {
+    head = `<p><b>Sample ${Math.min(r.done + 1, total)} of ${total}</b>${cur ? ` · ${esc(cur.id)} ${esc(cur.name)}` : ''} <span class="note">· ${mmss(r.elapsed || 0)}</span></p>
+      <div class="progress"><div style="width:${Math.round(100 * r.done / total)}%"></div></div>
+      <p class="note">${esc((S.log.filter(l => l.trim()).slice(-1)[0] || 'Starting…').trim())}</p>`;
+  } else if (r.code === 0) {
+    const sum = S.log.filter(l => /samples: expected mass found|delta hits:/.test(l)).map(l => l.trim());
+    head = `<div class="okbox"><b>Report ready</b> <span class="note">in ${mmss(r.elapsed || 0)}</span>${sum.map(l => `<div class="note">${esc(l)}</div>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${r.pptx ? '<button class="btn primary" id="openDeck">Open slides</button><button class="btn" id="showDeck">Show in Finder</button>' : ''}
+      <button class="btn" id="seeResults">See results</button></div>`;
+  } else if (r.cancelled) {
+    head = `<div class="warnbox">Cancelled. The slides and summary.csv from the previous report (if any) are unchanged.</div>`;
+  } else if (r.code != null) {
+    const why = S.log.filter(l => l.trim()).slice(-14).join('\n');
+    head = `<div class="warnbox"><b>The report could not be made.</b><pre class="log" style="background:#fff;margin-top:8px">${esc(why)}</pre></div>`;
+  }
+  box.innerHTML = `<h3>Progress</h3>${head}<details ${r.running ? '' : ''}><summary>Log (${S.log.length} lines)</summary><pre class="log" id="logPre">${esc(S.log.join('\n'))}</pre></details>`;
+  const lp = $('#logPre'); if (lp) lp.scrollTop = lp.scrollHeight;
+  const od = $('#openDeck'); if (od) od.onclick = () => api('open', {path: r.pptx});
+  const sd = $('#showDeck'); if (sd) sd.onclick = () => api('open', {path: r.pptx, reveal: true});
+  const sr = $('#seeResults'); if (sr) sr.onclick = () => setTab('results');
+}
+
+/* ------------------------------------------------------------------ results */
+async function loadResults(quiet) {
+  const r = await api('results');
+  if (!r.ok) { if (!quiet) showError(r.error); return; }
+  S.results = r; updateCounts();
+  if (S.tab === 'results') renderResults();
+  if (S.tab === 'samples' && $('#samplesTable')) renderTable();
+}
+const FOUND = {yes: 'found', weak: 'weak', no: 'not found'};
+const RCOLS = [
+  {k: 'id', l: 'ID'}, {k: 'name', l: 'Name'}, {k: 'found', l: 'Expected'}, {k: 'rt_min', l: 'RT (min)', n: true, c: 'r'},
+  {k: 'ions_found', l: 'Ions'}, {k: 'mean_ppm', l: 'ppm', n: true, c: 'r'}, {k: 'strongest', l: 'Strongest species'},
+  {k: 'delta_hits', l: 'Delta hits', n: true, c: 'r', tip: 'Confident delta hits; in brackets the same search with another peptide\'s sequence (chance level)'},
+  {k: 'main_peaks', l: 'Biggest LC peak'}, {k: 'blank', l: 'Blank'}];
+function renderResults() {
+  const P = $('#page-results'), R = S.results;
+  if (!R || !R.rows.length) { P.innerHTML = `<div class="center"><div class="card"><h1>No report yet</h1><p>Make one in the Run tab. Results appear here and in MS_report inside the folder.</p></div></div>`; return; }
+  const rows = R.rows;
+  const n = k => rows.filter(r => r.found === k).length;
+  const own = rows.reduce((a, r) => a + (+r.delta_hits || 0), 0), chance = rows.reduce((a, r) => a + (+r.delta_hits_with_wrong_sequence || 0), 0);
+  let list = rows.filter(r => S.resFilter === 'all' || r.found === S.resFilter);
+  if (S.resSort) { const {k, dir} = S.resSort, col = RCOLS.find(c => c.k === k);
+    list = [...list].sort((a, b) => { const x = a[k] || '', y = b[k] || ''; const c = col && col.n ? ((+x || -1e9) - (+y || -1e9)) : String(x).localeCompare(String(y), undefined, {numeric: true}); return dir * c; }); }
+  P.innerHTML = `<div class="stats">
+      <div class="stat"><b>${n('yes')}</b><span>of ${rows.length} found</span></div>
+      <div class="stat"><b>${n('weak')}</b><span>weak</span></div>
+      <div class="stat"><b>${n('no')}</b><span>not found</span></div>
+      <div class="stat" title="Treat delta hits as leads, not proof"><b>${own}</b><span>delta hits · ${chance} by chance</span></div>
+      <div class="grow"></div>
+      <span class="note">Made ${esc(R.made)}</span>
+      ${R.pptx ? '<button class="btn primary" id="rDeck">Open slides</button>' : ''}<button class="btn" id="rCsv">Open summary.csv</button><button class="btn" id="rFolder">Show in Finder</button>
+    </div>
+    <div class="toolbar"><div class="chips" id="rChips">${['all', 'yes', 'weak', 'no'].map(k => `<button class="chip ${S.resFilter === k ? 'on' : ''}" data-k="${k}">${k === 'all' ? 'All ' + rows.length : FOUND[k] + ' ' + n(k)}</button>`).join('')}</div>
+      <span class="note">Click a row for the m/z table, main peaks and structure.</span></div>
+    <div class="scroll"><table id="resTable"><thead><tr>${RCOLS.map(c => `<th data-sort="${c.k}" class="${c.c || ''}" title="${esc(c.tip || 'Sort')}">${c.l}${S.resSort && S.resSort.k === c.k ? (S.resSort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead>
+    <tbody>${list.map(r => resRow(r)).join('')}</tbody></table></div>`;
+  $('#rChips').onclick = e => { const b = e.target.closest('.chip'); if (b) { S.resFilter = b.dataset.k; renderResults(); } };
+  $$('#resTable th[data-sort]').forEach(th => th.onclick = () => { const k = th.dataset.sort; S.resSort = S.resSort && S.resSort.k === k ? {k, dir: -S.resSort.dir} : {k, dir: 1}; renderResults(); });
+  $$('#resTable tr.clickable').forEach(tr => tr.onclick = () => { S.resOpen = S.resOpen === tr.dataset.id ? null : tr.dataset.id; renderResults(); });
+  $$('[data-rtset]').forEach(b => b.onclick = () => setLine(b.dataset.rtset, $('[data-rtfor]').value.trim()));
+  $$('[data-rtclear]').forEach(b => b.onclick = () => setLine(b.dataset.rtclear, ''));
+  $$('[data-rtuse]').forEach(b => b.onclick = () => setLine(b.dataset.rtuse, b.dataset.rt));
+  const d = $('#rDeck'); if (d) d.onclick = () => api('open', {path: R.pptx});
+  $('#rCsv').onclick = () => api('open', {path: R.summary, excel: true});
+  $('#rFolder').onclick = () => api('open', {path: R.out, reveal: false});
+}
+const PEAKCOLS = ['rt_min', 'tic_rel_pct', 'mono_mz', 'z', 'neutral_mass', 'delta_vs_expected', 'also_in_blank', 'possible_explanations'];
+function lineText(r) {
+  const sr = S.rows.find(x => x.id === r.id), cur = sr ? (sr.spectrum_rt || '') : '';
+  const now = cur ? `Set to <b>${esc(cur)} min</b>.` : (r.found === 'no' ? 'At the TIC maximum (the product was not found).' : 'At the expected product.');
+  return `${now} Move it to <input class="search" data-rtfor="${esc(r.id)}" value="${esc(cur)}" placeholder="min" style="width:70px;padding:3px 6px"> min
+    <button class="btn" data-rtset="${esc(r.id)}">Set</button>${cur ? ` <button class="link" data-rtclear="${esc(r.id)}">Back to automatic</button>` : ''}`;
+}
+async function setLine(id, rt) {
+  const row = S.rows.find(x => x.id === id);
+  if (!row) { showError(`Sample ${id} is not in samples.csv any more.`); return; }
+  if (rt && !(+rt >= 0)) { showError(`'${rt}' is not a time in minutes.`); return; }
+  row.spectrum_rt = rt; markDirty();
+  if (!(await saveSamples())) return;
+  await validate(); renderResults();
+  const v = await ask(rt ? `Line for ${id} set to ${rt} min` : `Line for ${id} back to automatic`,
+    'Saved in samples.csv. The slides change when the report is made again (all samples; converted files are reused, so it is quick).',
+    [{label: 'Later', value: false}, {label: 'Make report again', value: true, primary: true}]);
+  if (v) { S.runOpt = 'all'; setTab('run'); if (!runPlan().bad.length) startRun(); }
+}
+function resRow(r) {
+  const peak = (r.main_peaks || '').split('; ')[0] || '';
+  const ch = r.delta_hits_with_wrong_sequence;
+  const row = `<tr class="clickable" data-id="${esc(r.id)}">
+    <td>${esc(r.id)}</td><td>${esc(r.name)}</td><td><span class="pill ${esc(r.found)}">${FOUND[r.found] || esc(r.found)}</span></td>
+    <td class="r">${esc(r.rt_min)}</td><td class="mono">${esc(r.ions_found)}</td><td class="r">${esc(r.mean_ppm)}</td><td>${esc(r.strongest)}</td>
+    <td class="r">${esc(r.delta_hits)}${ch !== '' && ch != null ? ` <span class="note">(${esc(ch)})</span>` : ''}</td>
+    <td><div class="trunc" title="${esc(r.main_peaks)}">${esc(peak)}</div></td><td class="note">${esc((r.blank || '').replace(/\.raw$/i, ''))}</td></tr>`;
+  if (S.resOpen !== r.id) return row;
+  const tbl = (rows, cols) => rows.length ? `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(x => `<tr>${cols.map(c => `<td>${esc(x[c])}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">none</p>';
+  const mz = r._mz_table || [], mp = r._main_peaks || [];
+  return row + `<tr class="detail"><td colspan="${RCOLS.length}"><div class="grid">
+    <div>${r._svg ? `<img src="${fileUrl(r._svg)}" alt="Structure of ${esc(r.name)}">` : ''}<p class="mono" style="margin-top:8px;white-space:normal;word-break:break-all">${esc(r.sequence)}</p><p class="note">${esc(r.formula)} · M ${esc(r.mono_mass)}</p></div>
+    <div>
+      <h4>m/z table</h4>${tbl(mz, mz.length ? Object.keys(mz[0]) : [])}
+      <h4>Deltas found</h4><p>${esc(r.deltas_found || 'none')}</p>
+      ${r.deltas_weak ? `<h4>Weak (not on the slide)</h4><p class="note">${esc(r.deltas_weak)}</p>` : ''}
+      ${r.observed_entered ? `<h4>Observed m/z you entered</h4><p>${esc(r.observed_entered)}</p>` : ''}
+      <h4>Red line (E) and spectrum (D)</h4>
+      <p>${lineText(r)}</p>
+      <h4>Biggest LC peaks</h4>${mp.length ? `<table><thead><tr><th></th>${PEAKCOLS.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+        mp.map(x => `<tr><td><button class="link" data-rtuse="${esc(r.id)}" data-rt="${esc(x.rt_min)}" title="Put the red line and the spectrum at this peak">use</button></td>${PEAKCOLS.map(c => `<td>${esc(x[c])}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">none</p>'}
+    </div></div></td></tr>`;
+}
+
+/* ------------------------------------------------------------------ building blocks */
+const KINDS = ['residue', 'n_cap', 'c_cap', 'tag', 'adduct', 'shift'];
+async function loadBlocks() {
+  const r = await api('blocks');
+  if (!r.ok) { $('#page-blocks').innerHTML = `<div class="center"><div class="card"><h1>building_blocks.csv has a problem</h1><p style="white-space:pre-wrap">${esc(r.error)}</p></div></div>`; return; }
+  S.blocks = r; S.blocks.rows = r.rows.map(x => ({...x, _k: ++KEY})); S.bDirty = false; S.bval = [];
+  renderBlocks(); checkBlocks();
+}
+function renderBlocks() {
+  const P = $('#page-blocks'), B = S.blocks;
+  const kinds = {all: B.rows.length}; KINDS.forEach(k => kinds[k] = B.rows.filter(r => r.kind === k).length);
+  P.innerHTML = `<div class="toolbar">
+      <input class="search" id="bFilter" placeholder="Filter by code, name, formula" value="${esc(S.bFilter)}">
+      <div class="chips" id="bKinds">${['all', ...KINDS].map(k => `<button class="chip ${S.bKind === k ? 'on' : ''}" data-k="${k}">${k === 'all' ? 'All' : k} ${kinds[k]}</button>`).join('')}</div>
+      <div class="grow"></div>
+      <span class="note" title="${esc(B.path)}">${B.in_folder ? 'This folder\'s own building_blocks.csv' : 'Shared file, used by every folder'}</span>
+      <button class="link" id="bReveal">Show</button>
+      <button class="btn" id="bAdd">Add row</button>
+      <button class="btn primary" id="bSave" ${S.bDirty ? '' : 'disabled'}>Save</button>
+    </div>
+    <div class="scroll"><table id="blocksTable"><colgroup><col style="width:92px"><col style="width:62px"><col style="width:210px"><col style="width:96px"><col style="width:130px"><col style="width:92px"><col style="width:132px"><col style="width:92px"><col><col style="width:200px"><col style="width:34px"></colgroup>
+      <thead><tr><th title="What you write in a sequence: one letter, (Aib), K[Biotin], Ac- / -NH2, or a delta code such as +Na">Code</th><th title="Three-letter code (residues)">Code3</th><th>Name</th><th>Kind</th>
+      <th title="What the unit adds to the peptide: residue = amino acid minus H2O; tag = group minus the H it replaces; '-H2O' for a loss">Formula</th><th class="r">Mass</th>
+      <th title="Deltas only: a group name to search them together in find_deltas">Group</th><th title="Deltas only: one-letter codes it can happen on (empty = any peptide)">Residues</th>
+      <th title="[*:1] N side, [*:2] C side, [*:3] side chain. Must agree with the formula.">SMILES</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="bBody"></tbody></table></div>`;
+  $('#bFilter').oninput = e => { S.bFilter = e.target.value; paintBlockRows(); };
+  $('#bKinds').onclick = e => { const b = e.target.closest('.chip'); if (b) { S.bKind = b.dataset.k; $$('#bKinds .chip').forEach(c => c.classList.toggle('on', c === b)); paintBlockRows(); } };
+  $('#bReveal').onclick = () => api('open', {path: B.path, reveal: true});
+  $('#bAdd').onclick = () => { const r = {_k: ++KEY}; B.columns.forEach(c => r[c] = ''); r.kind = S.bKind === 'all' ? 'residue' : S.bKind; B.rows.unshift(r); S.bFilter = ''; $('#bFilter').value = ''; bDirty(); paintBlockRows(); checkBlocks(); const f = $('#bBody input'); f && f.focus(); };
+  $('#bSave').onclick = saveBlocks;
+  paintBlockRows();
+}
+function paintBlockRows() {
+  const B = S.blocks, q = S.bFilter.toLowerCase();
+  const idx = B.rows.map((r, i) => i).filter(i => { const r = B.rows[i];
+    if (S.bKind !== 'all' && r.kind !== S.bKind) return false;
+    return !q || ['code', 'code3', 'name', 'formula', 'group', 'notes'].some(f => (r[f] || '').toLowerCase().includes(q)); });
+  const inp = (i, f, cls = '') => `<input class="cell ${cls}" data-b="${f}" value="${esc(B.rows[i][f])}" spellcheck="false" autocomplete="off">`;
+  $('#bBody').innerHTML = idx.map(i => { const r = B.rows[i]; return `<tr data-i="${i}">
+    <td>${inp(i, 'code', 'mono')}</td><td>${inp(i, 'code3')}</td><td>${inp(i, 'name')}</td>
+    <td><select class="cell" data-b="kind">${KINDS.map(k => `<option ${r.kind === k ? 'selected' : ''}>${k}</option>`).join('')}${KINDS.includes(r.kind) ? '' : `<option selected>${esc(r.kind)}</option>`}</select></td>
+    <td>${inp(i, 'formula', 'mono')}</td><td class="r mono bmass" style="padding-top:7px"></td><td>${inp(i, 'group')}</td><td>${inp(i, 'residues', 'mono')}</td>
+    <td>${inp(i, 'smiles', 'mono')}<div class="errtext"></div></td><td>${inp(i, 'notes')}</td>
+    <td><button class="link" data-del="${i}" title="Delete row" aria-label="Delete row" style="color:var(--faint);padding-top:6px">✕</button></td></tr>`; }).join('')
+    || `<tr><td colspan="11" class="note" style="padding:24px">No rows match.</td></tr>`;
+  idx.forEach(paintBlockRow);
+}
+function paintBlockRow(i) {
+  const tr = $(`#bBody tr[data-i="${i}"]`); if (!tr) return;
+  const v = S.bval[i] || {errors: {}, info: {}};
+  $$('.cell', tr).forEach(el => el.classList.toggle('err', !!v.errors[el.dataset.b]));
+  $('.bmass', tr).textContent = v.info.mass != null ? (v.info.mass > 0 && ['shift', 'adduct'].includes(S.blocks.rows[i].kind) ? '+' : '') + v.info.mass.toFixed(4) : '';
+  $('.errtext', tr).textContent = Object.entries(v.errors).map(([f, m]) => `${f}: ${m}`).join(' · ');
+}
+function bDirty() { S.bDirty = true; const b = $('#bSave'); if (b) b.disabled = false; }
+document.addEventListener('input', e => { const el = e.target; if (!el.matches('#bBody .cell')) return; S.blocks.rows[+el.closest('tr').dataset.i][el.dataset.b] = el.value; bDirty(); checkSoon(); });
+document.addEventListener('change', e => { const el = e.target; if (!el.matches('#bBody select.cell')) return; S.blocks.rows[+el.closest('tr').dataset.i][el.dataset.b] = el.value; bDirty(); checkBlocks(); });
+document.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; S.blocks.rows.splice(+d.dataset.del, 1); S.bval = []; bDirty(); paintBlockRows(); checkBlocks(); });
+let bTimer = null, bSeq = 0;
+function checkSoon() { clearTimeout(bTimer); bTimer = setTimeout(checkBlocks, 300); }
+async function checkBlocks() {
+  const my = ++bSeq;
+  const r = await api('blocks_check', {rows: S.blocks.rows.map(({_k, ...x}) => x)});
+  if (my !== bSeq || !r.ok) return;
+  S.bval = r.results;
+  $$('#bBody tr[data-i]').forEach(tr => paintBlockRow(+tr.dataset.i));
+}
+async function saveBlocks(force = false) {
+  if (!S.blocks || !S.bDirty) return;
+  const r = await api('blocks_save', {rows: S.blocks.rows.map(({_k, ...x}) => x), columns: S.blocks.columns, mtime: S.blocks.mtime, force});
+  if (r.conflict) {
+    const v = await ask('File changed on disk', r.error, [{label: 'Cancel', value: false}, {label: 'Overwrite', value: true, primary: true}]);
+    if (v) saveBlocks(true); return;
+  }
+  if (!r.ok) { showError(r.error); return; }
+  S.blocks.mtime = r.mtime; S.bDirty = false; $('#bSave').disabled = true; S.deltas = null;
+  toast('Saved building_blocks.csv'); validate();
+}
+
+/* ------------------------------------------------------------------ help */
+function renderHelp() {
+  const P = $('#page-help');
+  if (!$('iframe', P)) P.innerHTML = `<iframe src="/manual?t=${encodeURIComponent(TOKEN)}" title="MS Report manual"></iframe>`;
+}
+window.addEventListener('beforeunload', e => { if (S.dirty || S.bDirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ------------------------------------------------------------------ start */
+(async function start() {
+  S.state = await api('state');
+  const f = new URLSearchParams(location.search).get('folder');
+  if (f) await openFolder(f); else { renderHeader(); renderHome(); }
+})();
+</script>
+</body>
+</html>
